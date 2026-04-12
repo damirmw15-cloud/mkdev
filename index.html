@@ -1,0 +1,4647 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>МК Трекер — Обществознание</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Unbounded:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --c1: #64AFDC;
+  --c2: #AFDCFA;
+  --c3: #CAEAFF;
+  --c4: #DBF1FF;
+  --c5: #EEF8FF;
+  --bg: #F4FAFF;
+  --card: #FFFFFF;
+  --text: #1A2940;
+  --text2: #4A6585;
+  --text3: #8AAEC8;
+  --border: #D0E8F7;
+  --shadow: rgba(100,175,220,0.15);
+  --shadow2: rgba(100,175,220,0.3);
+  --success: #34C77B;
+  --gold: #F5A623;
+  --silver: #9DB8CC;
+  --xp-color: #64AFDC;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+/* ─── HEADER ─── */
+.header {
+  background: linear-gradient(135deg, var(--c1) 0%, var(--c2) 100%);
+  padding: calc(12px + env(safe-area-inset-top)) 16px 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 20px var(--shadow2);
+}
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.header-title {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: -0.5px;
+}
+.header-account-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.header-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 8px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.course-switch-chip {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  max-width: 190px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,0.28);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.12);
+  color: white;
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.course-switch-chip.visible {
+  display: inline-flex;
+}
+.course-switch-chip:active {
+  transform: scale(0.98);
+}
+.course-switch-icon {
+  font-size: 12px;
+  opacity: 0.95;
+}
+.course-switch-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.course-switch-arrow {
+  font-size: 10px;
+  opacity: 0.8;
+}
+.course-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 3200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(17, 30, 48, 0.34);
+  padding: 16px;
+}
+.course-sheet {
+  width: 100%;
+  max-width: 460px;
+  background: white;
+  border-radius: 22px 22px 18px 18px;
+  box-shadow: 0 16px 48px rgba(25, 53, 83, 0.18);
+  border: 1px solid rgba(208,232,247,0.9);
+  padding: 14px 14px calc(14px + env(safe-area-inset-bottom));
+}
+.course-sheet-handle {
+  width: 42px;
+  height: 4px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  background: var(--border);
+}
+.course-sheet-title {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.course-sheet-subtitle {
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.course-sheet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.course-option {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  border-radius: 14px;
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.course-option.active {
+  border-color: var(--c1);
+  background: var(--c5);
+  box-shadow: 0 6px 18px rgba(100,175,220,0.12);
+}
+.course-option-main {
+  min-width: 0;
+}
+.course-option-name {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 800;
+  margin-bottom: 3px;
+}
+.course-option-meta {
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 700;
+}
+.course-option-check {
+  flex-shrink: 0;
+  font-size: 16px;
+  color: var(--c1);
+  font-weight: 900;
+}
+.admin-course-note {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--c5);
+  border: 1.5px solid var(--border);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text2);
+}
+.streak-pill {
+  background: rgba(255,255,255,0.25);
+  border-radius: 20px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid rgba(255,255,255,0.4);
+}
+.streak-pill:active { transform: scale(0.95); }
+.streak-pill span { font-size: 20px; }
+.streak-count {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+}
+.streak-label { font-size: 11px; color: rgba(255,255,255,0.85); font-weight: 600; }
+
+/* ─── NAV TABS ─── */
+.nav-tabs {
+  display: flex;
+  gap: 4px;
+  padding-bottom: 0;
+}
+.nav-tab {
+  flex: 1;
+  padding: 10px 4px;
+  border: none;
+  background: transparent;
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  text-align: center;
+}
+.nav-tab.active {
+  color: white;
+  border-bottom-color: white;
+}
+.nav-tab:active { opacity: 0.7; }
+
+/* ─── MAIN ─── */
+.main { padding: 16px; max-width: 500px; margin: 0 auto; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ─── HERO / CHARACTER ─── */
+.hero-card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 20px var(--shadow);
+  border: 1.5px solid var(--border);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.character-wrap {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  flex-shrink: 0;
+}
+#character-svg {
+  width: 90px;
+  height: 90px;
+  transition: all 0.5s ease;
+}
+.character-wrap .aura {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  opacity: 0;
+  transition: all 0.5s;
+  pointer-events: none;
+}
+.hero-info { flex: 1; min-width: 0; }
+.hero-rank {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--c1);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 2px;
+}
+.hero-name {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.xp-bar-wrap { margin-bottom: 6px; }
+.xp-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text2);
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.xp-bar {
+  height: 8px;
+  background: var(--c4);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.xp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--c1), var(--c2));
+  border-radius: 10px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.xp-total {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c1);
+}
+
+/* ─── STATS ROW ─── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.stat-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 12px 10px;
+  text-align: center;
+  box-shadow: 0 2px 12px var(--shadow);
+  border: 1.5px solid var(--border);
+}
+.stat-icon { font-size: 20px; margin-bottom: 4px; }
+.stat-val {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.stat-lbl { font-size: 10px; color: var(--text3); font-weight: 700; }
+
+/* ─── SECTION TITLE ─── */
+.section-title {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ─── WEEK SELECTOR ─── */
+.week-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  background: var(--card);
+  border-radius: 14px;
+  padding: 10px 14px;
+  box-shadow: 0 2px 12px var(--shadow);
+  border: 1.5px solid var(--border);
+}
+.week-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--c4);
+  color: var(--c1);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.week-btn:active { transform: scale(0.9); background: var(--c3); }
+.week-info { flex: 1; text-align: center; }
+.week-num {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+.week-dates { font-size: 11px; color: var(--text3); font-weight: 600; }
+.week-progress-mini { font-size: 11px; color: var(--c1); font-weight: 700; }
+
+/* ─── TASKS ─── */
+.category-block { margin-bottom: 16px; }
+.cat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.cat-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text2);
+}
+.cat-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.cat-xp { font-size: 11px; color: var(--text3); font-weight: 700; }
+
+.task-item {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 10px var(--shadow);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+.task-item:active { transform: scale(0.98); }
+.task-item.done {
+  background: var(--c5);
+  border-color: var(--c3);
+}
+.task-check {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 2.5px solid var(--c2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: white;
+}
+.task-item.done .task-check {
+  background: var(--c1);
+  border-color: var(--c1);
+}
+.task-check-icon { font-size: 12px; opacity: 0; transition: opacity 0.2s; }
+.task-item.done .task-check-icon { opacity: 1; }
+.task-body { flex: 1; min-width: 0; }
+.task-name { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.3; }
+.task-item.done .task-name { text-decoration: line-through; color: var(--text3); }
+.task-meta { display: flex; gap: 8px; margin-top: 3px; align-items: center; }
+.task-xp-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--c1);
+  background: var(--c4);
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+.task-diff {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+}
+
+/* ─── CATEGORY PROGRESS ─── */
+.cat-progress-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 12px var(--shadow);
+  border: 1.5px solid var(--border);
+}
+.cat-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.cat-progress-name {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 800; color: var(--text);
+}
+.cat-progress-pct { font-size: 12px; font-weight: 800; color: var(--c1); }
+.cat-bar {
+  height: 8px;
+  background: var(--c4);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.cat-bar-fill {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.cat-stats { font-size: 11px; color: var(--text3); font-weight: 600; }
+
+/* ─── ACHIEVEMENTS ─── */
+.achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.badge-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 14px 12px;
+  text-align: center;
+  box-shadow: 0 2px 12px var(--shadow);
+  border: 1.5px solid var(--border);
+  transition: all 0.3s;
+}
+.badge-card.unlocked {
+  border-color: var(--c2);
+  background: linear-gradient(135deg, var(--c5), white);
+}
+.badge-card.secret:not(.unlocked) { opacity: 0.6; }
+.badge-icon { font-size: 32px; margin-bottom: 8px; filter: grayscale(1); transition: filter 0.3s; }
+.badge-card.unlocked .badge-icon { filter: grayscale(0); }
+.badge-name { font-size: 12px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+.badge-desc { font-size: 10px; color: var(--text3); font-weight: 600; line-height: 1.3; margin-bottom: 8px; }
+.badge-prog { font-size: 10px; color: var(--c1); font-weight: 700; }
+.badge-bar { height: 4px; background: var(--c4); border-radius: 4px; margin-top: 6px; overflow: hidden; }
+.badge-bar-fill { height: 100%; background: linear-gradient(90deg, var(--c1), var(--c2)); border-radius: 4px; transition: width 0.6s ease; }
+
+/* ─── REWARDS ─── */
+.reward-card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 12px var(--shadow);
+  border: 1.5px solid var(--border);
+  transition: all 0.3s;
+}
+.reward-card.unlocked {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, #FFFDF0, white);
+  box-shadow: 0 4px 20px rgba(245,166,35,0.2);
+}
+.reward-header {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+}
+.reward-icon { font-size: 28px; }
+.reward-info { flex: 1; }
+.reward-name { font-size: 14px; font-weight: 800; color: var(--text); }
+.reward-cond { font-size: 11px; color: var(--text3); font-weight: 600; margin-top: 2px; }
+.reward-status {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--c4);
+  color: var(--c1);
+}
+.reward-card.unlocked .reward-status {
+  background: #FFF3CD;
+  color: var(--gold);
+}
+.reward-bar { height: 6px; background: var(--c4); border-radius: 6px; overflow: hidden; margin-bottom: 4px; }
+.reward-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--c1), var(--c2));
+  transition: width 0.6s ease;
+}
+.reward-card.unlocked .reward-bar-fill { background: linear-gradient(90deg, var(--gold), #F7C96E); }
+.reward-prog { font-size: 10px; color: var(--text3); font-weight: 700; text-align: right; }
+
+/* ─── LEVEL UP OVERLAY ─── */
+.levelup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(100,175,220,0.85);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.levelup-overlay.show { opacity: 1; pointer-events: all; }
+.levelup-box {
+  text-align: center;
+  animation: levelupBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes levelupBounce {
+  from { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+  to { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.levelup-emoji { font-size: 80px; margin-bottom: 16px; }
+.levelup-text {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 32px;
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  margin-bottom: 8px;
+}
+.levelup-sub { font-size: 18px; font-weight: 700; color: rgba(255,255,255,0.9); margin-bottom: 24px; }
+.levelup-close {
+  background: white;
+  color: var(--c1);
+  border: none;
+  padding: 14px 32px;
+  border-radius: 50px;
+  font-family: 'Unbounded', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+/* ─── XP POPUP ─── */
+.xp-popup {
+  position: fixed;
+  pointer-events: none;
+  font-family: 'Unbounded', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c1);
+  text-shadow: 0 2px 8px rgba(100,175,220,0.5);
+  z-index: 999;
+  animation: xpFloat 1.2s ease forwards;
+}
+@keyframes xpFloat {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  20% { transform: translateY(-10px) scale(1.2); opacity: 1; }
+  80% { transform: translateY(-40px) scale(1); opacity: 1; }
+  100% { transform: translateY(-60px) scale(0.9); opacity: 0; }
+}
+
+/* ─── STARS ANIMATION ─── */
+.star-particle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 998;
+  animation: starFly 0.8s ease forwards;
+}
+@keyframes starFly {
+  0% { transform: translate(0,0) scale(0); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(1); opacity: 0; }
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--c3); border-radius: 4px; }
+
+/* ─── CHARACTER STAGES ─── */
+.char-aura-1 { box-shadow: 0 0 20px var(--c2); border-radius: 50%; }
+.char-aura-2 { box-shadow: 0 0 30px var(--c1); border-radius: 50%; }
+.char-aura-3 { box-shadow: 0 0 40px var(--c1), 0 0 80px var(--c2); border-radius: 50%; }
+.char-aura-4 { box-shadow: 0 0 50px #F5A623, 0 0 100px var(--c1); border-radius: 50%; animation: auraPulse 2s infinite alternate; }
+@keyframes auraPulse {
+  from { box-shadow: 0 0 50px #F5A623, 0 0 80px var(--c1); }
+  to { box-shadow: 0 0 70px #F5A623, 0 0 120px var(--c1); }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 30px 20px;
+  color: var(--text3);
+  font-size: 13px;
+  font-weight: 600;
+}
+.empty-state .e-icon { font-size: 40px; margin-bottom: 10px; }
+
+/* ─── AUTH SCREEN ─── */
+.auth-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  background: linear-gradient(160deg, var(--c3) 0%, var(--bg) 60%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+.auth-logo {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--c1);
+  margin-bottom: 4px;
+  letter-spacing: -0.5px;
+}
+.auth-sub {
+  font-size: 13px;
+  color: var(--text3);
+  font-weight: 600;
+  margin-bottom: 32px;
+}
+.auth-card {
+  background: white;
+  border-radius: 24px;
+  padding: 24px 20px;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: 0 8px 40px var(--shadow2);
+  border: 1.5px solid var(--border);
+}
+.auth-tabs {
+  display: flex;
+  background: var(--c5);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 20px;
+}
+.auth-tab-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: transparent;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text3);
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.auth-tab-btn.active {
+  background: white;
+  color: var(--c1);
+  box-shadow: 0 2px 8px var(--shadow);
+}
+.auth-field {
+  margin-bottom: 12px;
+}
+.auth-field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text2);
+  margin-bottom: 5px;
+}
+.auth-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.auth-input:focus { border-color: var(--c1); background: white; }
+.auth-btn-main {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--c1), var(--c2));
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-family: 'Unbounded', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 4px;
+}
+.auth-btn-main:active { transform: scale(0.98); opacity: 0.9; }
+.auth-btn-main:disabled { opacity: 0.6; cursor: not-allowed; }
+.auth-error {
+  color: #E53E3E;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  margin-top: 10px;
+  min-height: 18px;
+}
+.auth-hint {
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 600;
+  text-align: center;
+  margin-top: 14px;
+  line-height: 1.5;
+}
+.auth-forgot {
+  text-align: center;
+  margin-top: 10px;
+}
+.auth-forgot button {
+  background: none;
+  border: none;
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c1);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ─── QUIZ STYLES ─── */
+.quiz-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.quiz-mode-card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 10px var(--shadow);
+}
+.quiz-mode-card:active { transform: scale(0.97); }
+.quiz-mode-card.active { border-color: var(--c1); background: var(--c5); }
+.quiz-mode-icon { font-size: 28px; margin-bottom: 6px; }
+.quiz-mode-name { font-size: 12px; font-weight: 800; color: var(--text); margin-bottom: 2px; }
+.quiz-mode-desc { font-size: 10px; color: var(--text3); font-weight: 600; }
+
+.quiz-filter-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.quiz-filter-btn {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.quiz-filter-btn.active {
+  background: var(--c1);
+  border-color: var(--c1);
+  color: white;
+}
+
+.quiz-question-card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 20px var(--shadow);
+  border: 1.5px solid var(--border);
+}
+.quiz-meta {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.quiz-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--c4);
+  color: var(--c1);
+}
+.quiz-badge.olympiad { background: #FFF3CD; color: var(--gold); }
+.quiz-badge.theme { background: var(--c5); color: var(--text2); }
+.quiz-question-text {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.quiz-num {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 11px;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+
+/* Options */
+.quiz-options { display: flex; flex-direction: column; gap: 8px; }
+.quiz-option {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  transition: all 0.2s;
+  text-align: left;
+  font-family: 'Nunito', sans-serif;
+  line-height: 1.4;
+}
+.quiz-option:active { transform: scale(0.98); }
+.quiz-option.selected { border-color: var(--c1); background: var(--c5); }
+.quiz-option.correct { border-color: var(--success); background: #F0FFF6; color: #1A6B3C; }
+.quiz-option.wrong { border-color: #FF6B6B; background: #FFF0F0; color: #C0392B; }
+
+/* Match question */
+.quiz-match-pairs { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+.quiz-match-row { display: flex; gap: 12px; align-items: stretch; }
+.quiz-match-term {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--c4);
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 800;
+  color: var(--text);
+}
+.quiz-match-select {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 16px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+  background: white;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+
+@media (max-width: 700px) {
+  .header {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .header-top {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .header-title {
+    font-size: 15px;
+    line-height: 1.15;
+  }
+  .streak-pill {
+    padding: 6px 8px;
+    border-radius: 16px;
+  }
+  .streak-count {
+    font-size: 12px;
+  }
+  .streak-label {
+    font-size: 10px;
+  }
+  .nav-tabs {
+    overflow-x: visible;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+    gap: 0;
+  }
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .nav-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 2px;
+    font-size: 10px;
+    white-space: normal;
+    line-height: 1.15;
+  }
+  .main {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .quiz-question-card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+  .quiz-question-text {
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  .quiz-match-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .quiz-match-term,
+  .quiz-match-select {
+    width: 100%;
+  }
+}
+
+/* Answer feedback */
+.quiz-feedback {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  display: none;
+}
+.quiz-feedback.show { display: block; }
+.quiz-feedback.correct-fb { background: #F0FFF6; border: 1.5px solid var(--success); }
+.quiz-feedback.wrong-fb { background: #FFF0F0; border: 1.5px solid #FF6B6B; }
+.quiz-feedback-title {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.quiz-feedback.correct-fb .quiz-feedback-title { color: #1A6B3C; }
+.quiz-feedback.wrong-fb .quiz-feedback-title { color: #C0392B; }
+.quiz-feedback-text { font-size: 12px; font-weight: 600; color: var(--text2); line-height: 1.5; }
+.quiz-ai-analysis {
+  margin-top: 14px;
+  padding: 14px 14px 12px;
+  background: linear-gradient(180deg, #F5FAFF 0%, #EEF6FF 100%);
+  border: 1.5px solid #D7E8FB;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  line-height: 1.55;
+  display: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+}
+.quiz-ai-analysis.show { display: block; }
+.quiz-ai-analysis.loading {
+  color: #6B87A8;
+}
+.quiz-ai-analysis-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Unbounded', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4A78A8;
+  margin-bottom: 8px;
+}
+.quiz-ai-analysis-body {
+  color: var(--text2);
+}
+.quiz-ai-analysis.soft {
+  background: linear-gradient(180deg, #F8FAFC 0%, #F2F5F9 100%);
+  border-color: #E4EAF2;
+}
+.quiz-ai-analysis.error {
+  background: linear-gradient(180deg, #FFF7F7 0%, #FFF1F1 100%);
+  border-color: #F5CACA;
+}
+.quiz-ai-analysis-tip {
+  margin-top: 8px;
+  font-size: 11px;
+  color: #7A8AA0;
+}
+
+.quiz-action-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.quiz-btn {
+  flex: 1;
+  padding: 13px;
+  border-radius: 14px;
+  border: none;
+  font-family: 'Unbounded', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.quiz-btn:active { transform: scale(0.97); }
+.quiz-btn.primary { background: linear-gradient(135deg, var(--c1), var(--c2)); color: white; }
+.quiz-btn.secondary { background: var(--c5); color: var(--c1); border: 1.5px solid var(--border); }
+
+/* Stats */
+.quiz-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.quiz-stat-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 12px 8px;
+  text-align: center;
+  border: 1.5px solid var(--border);
+  box-shadow: 0 2px 8px var(--shadow);
+}
+.quiz-stat-val {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--c1);
+}
+.quiz-stat-lbl { font-size: 10px; color: var(--text3); font-weight: 700; }
+
+.weak-theme-item {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1.5px solid var(--border);
+  box-shadow: 0 2px 8px var(--shadow);
+}
+.weak-theme-name { flex: 1; font-size: 13px; font-weight: 700; color: var(--text); }
+.weak-theme-pct { font-family: 'Unbounded', sans-serif; font-size: 13px; font-weight: 700; }
+.weak-theme-pct.bad { color: #FF6B6B; }
+.weak-theme-pct.ok { color: var(--gold); }
+.weak-theme-pct.good { color: var(--success); }
+
+/* Admin quiz form */
+.quiz-type-tabs {
+  display: flex;
+  background: var(--c5);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 12px;
+}
+.quiz-type-tab {
+  flex: 1;
+  padding: 7px 4px;
+  border: none;
+  background: transparent;
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.quiz-type-tab.active { background: white; color: var(--c1); box-shadow: 0 2px 6px var(--shadow); }
+
+/* ─── ADMIN MODAL ─── */
+.admin-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26,41,64,0.92);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.admin-modal-overlay.show {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ─── ADMIN BADGE ─── */
+.admin-badge {
+  background: linear-gradient(135deg, var(--gold), #F7C96E);
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: 'Unbounded', sans-serif;
+  letter-spacing: 0.5px;
+}
+
+/* ─── CALENDAR ─── */
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  background: var(--card);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 12px var(--shadow);
+  border: 1.5px solid var(--border);
+}
+.cal-month-label {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  text-transform: capitalize;
+}
+.cal-nav-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--c4);
+  color: var(--c1);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.cal-nav-btn:active { transform: scale(0.9); }
+
+.cal-grid {
+  background: var(--card);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px var(--shadow);
+  border: 1.5px solid var(--border);
+  margin-bottom: 16px;
+}
+.cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  background: var(--c4);
+  padding: 8px 0 6px;
+}
+.cal-wd {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text3);
+}
+.cal-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  padding: 6px;
+}
+.cal-day {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  padding: 2px;
+}
+.cal-day:active { transform: scale(0.92); }
+.cal-day.empty { cursor: default; }
+.cal-day.today {
+  background: var(--c1);
+}
+.cal-day.today .cal-day-num { color: white; font-weight: 900; }
+.cal-day.has-event { background: var(--c5); border: 1.5px solid var(--c3); }
+.cal-day.has-deadline { background: #FFF3E0; border: 1.5px solid #FFD180; }
+.cal-day-num {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+.cal-day.other-month .cal-day-num { color: var(--text3); }
+.cal-dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  margin-top: 2px;
+}
+.cal-dot.event { background: var(--c1); }
+.cal-dot.deadline { background: var(--gold); }
+
+/* ─── EVENTS LIST ─── */
+.event-card {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  box-shadow: 0 2px 10px var(--shadow);
+  border: 1.5px solid var(--border);
+}
+.event-card.lecture  { border-left: 4px solid #64AFDC; }
+.event-card.seminar  { border-left: 4px solid #5BB8A8; }
+.event-card.exam     { border-left: 4px solid #8B6FD6; }
+.event-card.deadline { border-left: 4px solid var(--gold); }
+.event-date-badge {
+  min-width: 40px;
+  text-align: center;
+  background: var(--c4);
+  border-radius: 10px;
+  padding: 6px 4px;
+}
+.event-card.lecture .event-date-badge  { background: #EEF8FF; }
+.event-card.seminar .event-date-badge  { background: #F0FFFA; }
+.event-card.exam .event-date-badge     { background: #F6F1FF; }
+.event-card.deadline .event-date-badge { background: #FFF3E0; }
+.event-date-day {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c1);
+  line-height: 1;
+}
+.event-card.lecture .event-date-day  { color: #64AFDC; }
+.event-card.seminar .event-date-day  { color: #5BB8A8; }
+.event-card.exam .event-date-day     { color: #8B6FD6; }
+.event-card.deadline .event-date-day { color: var(--gold); }
+.event-date-mon {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text3);
+  text-transform: uppercase;
+}
+.event-body { flex: 1; min-width: 0; }
+.event-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.event-desc  { font-size: 11px; color: var(--text3); font-weight: 600; }
+.event-type-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+.event-type-badge.lecture  { background: #EEF8FF; color: #64AFDC; }
+.event-type-badge.seminar  { background: #F0FFFA; color: #5BB8A8; }
+.event-type-badge.exam     { background: #F6F1FF; color: #8B6FD6; }
+.event-type-badge.deadline { background: #FFF3CD; color: var(--gold); }
+
+/* ─── ADMIN PANEL ─── */
+.admin-section {
+  background: linear-gradient(135deg, #FFF9F0, white);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+  border: 1.5px solid #FFE4A0;
+  box-shadow: 0 2px 12px rgba(245,166,35,0.1);
+}
+.admin-section-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.admin-section-title {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+}
+.admin-section-arrow {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--gold);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.admin-section.open .admin-section-arrow {
+  transform: rotate(180deg);
+}
+.admin-section-body {
+  display: none;
+  margin-top: 12px;
+}
+.admin-section.open .admin-section-body {
+  display: block;
+}
+.admin-inline-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.admin-task-item {
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px var(--shadow);
+}
+.admin-task-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.admin-task-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.35;
+}
+.admin-task-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.admin-chip {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--c5);
+  color: var(--text2);
+}
+.admin-task-actions {
+  display: flex;
+  gap: 8px;
+}
+.admin-task-actions button {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.admin-task-actions .edit-btn {
+  background: var(--c4);
+  color: var(--c1);
+}
+.admin-task-actions .delete-btn {
+  background: #FFF0F0;
+  color: #FF6B6B;
+}
+@media (max-width: 520px) {
+  .admin-inline-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.admin-form-row { margin-bottom: 10px; }
+.admin-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text2);
+  margin-bottom: 4px;
+  display: block;
+}
+.admin-input, .admin-select, .admin-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: white;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.admin-input:focus, .admin-select:focus, .admin-textarea:focus {
+  border-color: var(--c1);
+}
+.admin-textarea { min-height: 60px; resize: vertical; }
+.admin-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--gold), #F7C96E);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Unbounded', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 4px;
+}
+.admin-btn:active { transform: scale(0.98); opacity: 0.9; }
+.admin-btn.danger {
+  background: linear-gradient(135deg, #FF6B6B, #FF9898);
+}
+.admin-btn.blue {
+  background: linear-gradient(135deg, var(--c1), var(--c2));
+}
+
+.del-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+.del-btn:hover { opacity: 1; }
+
+/* ─── PROGRESS TABLE (admin) ─── */
+.student-row {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border: 1.5px solid var(--border);
+  box-shadow: 0 2px 8px var(--shadow);
+}
+.student-name { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+.student-stats { font-size: 11px; color: var(--text3); font-weight: 600; margin-bottom: 6px; }
+.student-bar { height: 6px; background: var(--c4); border-radius: 6px; overflow: hidden; }
+.student-bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--c1), var(--c2)); transition: width 0.6s ease; }
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--text);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 700;
+  z-index: 3000;
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- LEVEL UP OVERLAY -->
+<div class="levelup-overlay" id="levelupOverlay">
+  <div class="levelup-box">
+    <div class="levelup-emoji">⭐</div>
+    <div class="levelup-text">LEVEL UP!</div>
+    <div class="levelup-sub" id="levelupRankText">Новый ранг получен!</div>
+    <button class="levelup-close" onclick="closeLevelup()">Продолжить 🚀</button>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN MODAL -->
+<div class="admin-modal-overlay" id="adminModal">
+  <div class="levelup-box" style="width:280px">
+    <div style="font-size:48px;margin-bottom:12px">👑</div>
+    <div class="levelup-text" style="font-size:22px;margin-bottom:6px">Режим админа</div>
+    <div style="font-size:14px;color:rgba(255,255,255,0.8);font-weight:600;margin-bottom:20px">Введи секретный ключ</div>
+    <input id="adminKeyInput" type="password"
+      placeholder="Секретный ключ..."
+      style="width:100%;padding:12px 16px;border-radius:12px;border:none;font-family:Nunito,sans-serif;font-size:14px;font-weight:700;outline:none;margin-bottom:10px;text-align:center"
+      onkeydown="if(event.key==='Enter')adminLoginSubmit()">
+    <div id="adminKeyError" style="color:#FF6B6B;font-size:12px;font-weight:700;margin-bottom:10px;min-height:16px"></div>
+    <button class="levelup-close" style="margin-bottom:10px;width:100%" onclick="adminLoginSubmit()">Войти 🔑</button>
+    <button onclick="closeAdminModal()" style="background:none;border:none;color:rgba(255,255,255,0.7);font-size:13px;font-weight:700;cursor:pointer;font-family:Nunito,sans-serif">Отмена</button>
+  </div>
+</div>
+
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="authScreen">
+  <div style="font-size:56px;margin-bottom:12px">📚</div>
+  <div class="auth-logo">МК ТРЕКЕР</div>
+  <div class="auth-sub">Обществознание 2025</div>
+
+  <div class="auth-card">
+    <div class="auth-tabs">
+      <button class="auth-tab-btn active" id="authTabLogin" onclick="switchAuthTab('login')">Войти</button>
+      <button class="auth-tab-btn" id="authTabReg" onclick="switchAuthTab('register')">Регистрация</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="authFormLogin">
+      <div class="auth-field">
+        <label>Email</label>
+        <input class="auth-input" type="email" id="loginEmail" placeholder="example@mail.ru" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Пароль</label>
+        <input class="auth-input" type="password" id="loginPassword" placeholder="Твой пароль" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')authLogin()">
+      </div>
+      <button class="auth-btn-main" id="loginBtn" onclick="authLogin()">Войти →</button>
+      <div class="auth-forgot">
+        <button onclick="authResetPassword()">Забыл пароль?</button>
+      </div>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="authFormReg" style="display:none">
+      <div class="auth-field">
+        <label>Имя</label>
+        <input class="auth-input" type="text" id="regName" placeholder="Как тебя зовут?" autocomplete="name">
+      </div>
+      <div class="auth-field">
+        <label>Email</label>
+        <input class="auth-input" type="email" id="regEmail" placeholder="example@mail.ru" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Пароль</label>
+        <input class="auth-input" type="password" id="regPassword" placeholder="Минимум 6 символов" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter')authRegister()">
+      </div>
+      <button class="auth-btn-main" id="registerBtn" onclick="authRegister()">Создать аккаунт →</button>
+    </div>
+
+    <div class="auth-error" id="authError"></div>
+    <div class="auth-hint">Прогресс сохраняется на всех устройствах<br>и в любом мессенджере 🌍</div>
+  </div>
+
+  <button onclick="openAdminModal()" style="margin-top:16px;background:none;border:none;font-family:Nunito,sans-serif;font-size:12px;font-weight:700;color:rgba(100,175,220,0.7);cursor:pointer;padding:8px 16px;border-radius:10px;transition:all 0.2s" onmouseover="this.style.color='var(--c1)'" onmouseout="this.style.color='rgba(100,175,220,0.7)'">
+    👑 Войти как администратор
+  </button>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="header-account-zone">
+      <div class="header-title">МК ТРЕКЕР</div>
+      <button class="header-user-btn" onclick="showAccountMenu()">
+        <div id="headerUserName" style="font-size:10px;color:rgba(255,255,255,0.9);font-weight:700;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+        <span style="font-size:10px;color:rgba(255,255,255,0.7)">⇄</span>
+      </button>
+      <button id="courseSwitcherBtn" class="course-switch-chip" onclick="openCourseSwitcher()" aria-label="Сменить курс">
+        <span class="course-switch-icon">🎓</span>
+        <span class="course-switch-text" id="courseSwitcherLabel">Курс</span>
+        <span class="course-switch-arrow">▾</span>
+      </button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="streak-pill" onclick="clickStreak()">
+        <span>🔥</span>
+        <div>
+          <div class="streak-count" id="streakCount">0</div>
+          <div class="streak-label">дней подряд</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchTab('home')">🏠 Главная</button>
+    <button class="nav-tab" onclick="switchTab('tasks')">📚 Задачи</button>
+    <button class="nav-tab" onclick="switchTab('calendar')">📅 Календарь</button>
+    <button class="nav-tab" onclick="switchTab('progress')">📊 Итоги</button>
+    <button class="nav-tab" id="adminTabBtn" style="display:none" onclick="switchTab('admin')">👑 Админ</button>
+    <button class="nav-tab" onclick="switchTab('quiz')">🧪 Тесты</button>
+  </div>
+</div>
+
+<div class="main">
+
+<!-- ══════════════════════════════════ HOME TAB ══════════════════════════════════ -->
+<div class="tab-content active" id="tab-home">
+
+  <!-- Hero Card -->
+  <div class="hero-card">
+    <div class="character-wrap" id="charWrap">
+      <svg id="character-svg" viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="hero-info">
+      <div class="hero-rank" id="heroRank">Новичок</div>
+      <div class="hero-name">Уровень <span id="heroLevel">1</span></div>
+      <div class="xp-bar-wrap">
+        <div class="xp-bar-label">
+          <span>XP</span>
+          <span id="xpBarLabel">0 / 100</span>
+        </div>
+        <div class="xp-bar"><div class="xp-bar-fill" id="xpBarFill" style="width:0%"></div></div>
+      </div>
+      <div class="xp-total">⚡ <span id="totalXP">0</span> XP всего</div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon">✅</div>
+      <div class="stat-val" id="statDone">0</div>
+      <div class="stat-lbl">Выполнено</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📝</div>
+      <div class="stat-val" id="statTotal">0</div>
+      <div class="stat-lbl">Всего задач</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🎯</div>
+      <div class="stat-val" id="statPct">0%</div>
+      <div class="stat-lbl">Прогресс</div>
+    </div>
+  </div>
+
+  <!-- Achievements preview -->
+  <div class="section-title">🏆 Последние достижения</div>
+  <div id="recentBadges"></div>
+
+  <!-- Today hint -->
+  <div class="section-title">📅 Текущая неделя</div>
+  <div id="currentWeekPreview"></div>
+
+</div>
+
+<!-- ══════════════════════════════════ TASKS TAB ══════════════════════════════════ -->
+<div class="tab-content" id="tab-tasks">
+
+  <div class="week-nav">
+    <button class="week-btn" onclick="changeWeek(-1)">‹</button>
+    <div class="week-info">
+      <div class="week-num" id="weekNum">Неделя 1</div>
+      <div class="week-dates" id="weekDates"></div>
+      <div class="week-progress-mini" id="weekProg"></div>
+    </div>
+    <button class="week-btn" onclick="changeWeek(1)">›</button>
+  </div>
+
+  <div id="tasksList"></div>
+</div>
+
+<!-- ══════════════════════════════════ PROGRESS TAB ══════════════════════════════════ -->
+<div class="tab-content" id="tab-progress">
+  <div class="section-title">📊 По предметам</div>
+  <div id="categoryProgress"></div>
+  <div class="section-title">🏅 Достижения</div>
+  <div class="achievements-grid" id="achievementsGrid"></div>
+  <div class="section-title">🎁 Мои награды</div>
+  <div id="rewardsList"></div>
+</div>
+
+<!-- ══════════════════════════════════ CALENDAR TAB ══════════════════════════════════ -->
+<div class="tab-content" id="tab-calendar">
+
+  <div class="cal-header">
+    <button class="cal-nav-btn" onclick="calChangeMonth(-1)">‹</button>
+    <div class="cal-month-label" id="calMonthLabel"></div>
+    <button class="cal-nav-btn" onclick="calChangeMonth(1)">›</button>
+  </div>
+
+  <div class="cal-grid">
+    <div class="cal-weekdays">
+      <div class="cal-wd">Пн</div>
+      <div class="cal-wd">Вт</div>
+      <div class="cal-wd">Ср</div>
+      <div class="cal-wd">Чт</div>
+      <div class="cal-wd">Пт</div>
+      <div class="cal-wd">Сб</div>
+      <div class="cal-wd">Вс</div>
+    </div>
+    <div class="cal-days" id="calDays"></div>
+  </div>
+
+  <div class="section-title">📋 События месяца</div>
+  <div id="calEventsList"></div>
+
+</div>
+
+<!-- ══════════════════════════════════ ADMIN TAB ══════════════════════════════════ -->
+<div class="tab-content" id="tab-admin">
+  <div class="admin-course-note" id="adminCourseNote">Курс: —</div>
+
+  <div class="admin-section" id="adminSectionEventsAdd">
+    <button class="admin-section-header" onclick="toggleAdminSection('adminSectionEventsAdd')">
+      <div class="admin-section-title">📅 Добавить событие / дедлайн</div>
+      <span class="admin-section-arrow">▼</span>
+    </button>
+    <div class="admin-section-body">
+      <div class="admin-form-row">
+        <label class="admin-label">Тип</label>
+        <select class="admin-select" id="adminEventType">
+          <option value="lecture">📚 Лекция</option>
+          <option value="seminar">🗣️ Семинар</option>
+          <option value="exam">📝 Зачёт</option>
+          <option value="deadline">⏰ Дедлайн</option>
+        </select>
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Дата</label>
+        <input type="date" class="admin-input" id="adminEventDate">
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Название</label>
+        <input type="text" class="admin-input" id="adminEventTitle" placeholder="Например: Пробник по обществу">
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Описание (необязательно)</label>
+        <textarea class="admin-textarea" id="adminEventDesc" placeholder="Дополнительная информация..."></textarea>
+      </div>
+      <button class="admin-btn" onclick="adminAddEvent()">➕ Добавить в календарь</button>
+    </div>
+  </div>
+
+  <div class="admin-section" id="adminSectionTaskEditor">
+    <button class="admin-section-header" onclick="toggleAdminSection('adminSectionTaskEditor')">
+      <div class="admin-section-title">📋 Редактор задач курса</div>
+      <span class="admin-section-arrow">▼</span>
+    </button>
+    <div class="admin-section-body">
+      <div style="font-size:13px;color:var(--text2);font-weight:800;margin-bottom:10px" id="taskEditorModeLabel">Новая задача</div>
+      <div class="admin-inline-grid">
+        <div class="admin-form-row">
+          <label class="admin-label">Неделя (1–35)</label>
+          <input type="number" class="admin-input" id="taskEditorWeek" min="1" max="35" placeholder="1">
+        </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Предмет</label>
+          <select class="admin-select" id="taskEditorCat">
+            <option value="sociology">👥 Социология</option>
+            <option value="politics">🏛️ Политология</option>
+            <option value="economics">💰 Экономика</option>
+            <option value="law">⚖️ Право</option>
+            <option value="philosophy">🧠 Философия</option>
+            <option value="culturology">🎨 Культурология</option>
+            <option value="crossdiscipline">🔗 Кросс</option>
+          </select>
+        </div>
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Название задачи</label>
+        <input type="text" class="admin-input" id="taskEditorName" placeholder="Название темы">
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">XP за выполнение</label>
+        <select class="admin-select" id="taskEditorXP">
+          <option value="10">10 XP — очень лёгкая</option>
+          <option value="15">15 XP — лёгкая</option>
+          <option value="20" selected>20 XP — средняя</option>
+          <option value="30">30 XP — сложная</option>
+          <option value="50">50 XP — очень сложная</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:14px">
+        <button class="admin-btn blue" style="flex:2" onclick="taskEditorSave()">💾 Сохранить задачу</button>
+        <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="taskEditorReset()">Сбросить</button>
+      </div>
+
+      <div class="admin-inline-grid">
+        <div class="admin-form-row">
+          <label class="admin-label">Фильтр по неделе</label>
+          <select class="admin-select" id="taskFilterWeek" onchange="renderTaskEditorList()">
+            <option value="all">Все недели</option>
+          </select>
+        </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Фильтр по предмету</label>
+          <select class="admin-select" id="taskFilterCat" onchange="renderTaskEditorList()">
+            <option value="all">Все предметы</option>
+            <option value="sociology">👥 Социология</option>
+            <option value="politics">🏛️ Политология</option>
+            <option value="economics">💰 Экономика</option>
+            <option value="law">⚖️ Право</option>
+            <option value="philosophy">🧠 Философия</option>
+            <option value="culturology">🎨 Культурология</option>
+            <option value="crossdiscipline">🔗 Кросс</option>
+          </select>
+        </div>
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Поиск по названию</label>
+        <input type="text" class="admin-input" id="taskFilterSearch" placeholder="🔍 Найти задачу..." oninput="renderTaskEditorList()">
+      </div>
+      <div style="font-size:13px;color:var(--text2);font-weight:800;margin:6px 0 8px">Существующие задачи</div>
+      <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:8px" id="taskEditorCount"></div>
+      <div id="taskEditorList"></div>
+    </div>
+  </div>
+
+  <div class="admin-section" id="adminSectionStudents">
+    <button class="admin-section-header" onclick="toggleAdminSection('adminSectionStudents')">
+      <div class="admin-section-title">👥 Прогресс учеников</div>
+      <span class="admin-section-arrow">▼</span>
+    </button>
+    <div class="admin-section-body">
+      <div id="adminStudentsList">
+        <div class="empty-state"><div class="e-icon">📊</div>Данные загружаются...</div>
+      </div>
+      <button class="admin-btn blue" style="margin-top:8px" onclick="adminLoadStudents()">🔄 Обновить</button>
+    </div>
+  </div>
+
+  <div class="admin-section" id="adminSectionEventsManage">
+    <button class="admin-section-header" onclick="toggleAdminSection('adminSectionEventsManage')">
+      <div class="admin-section-title">🗑️ Управление событиями</div>
+      <span class="admin-section-arrow">▼</span>
+    </button>
+    <div class="admin-section-body">
+      <div id="adminEventsList"></div>
+    </div>
+  </div>
+
+  <div class="admin-section" id="adminSectionQuestionAdd">
+    <button class="admin-section-header" onclick="toggleAdminSection('adminSectionQuestionAdd')">
+      <div class="admin-section-title">🧪 Добавить вопрос в базу тестов</div>
+      <span class="admin-section-arrow">▼</span>
+    </button>
+    <div class="admin-section-body">
+      <div class="quiz-type-tabs">
+        <button class="quiz-type-tab active" id="addTypeBtn_single" onclick="setAddQType('single')">Один ответ</button>
+        <button class="quiz-type-tab" id="addTypeBtn_multi" onclick="setAddQType('multi')">Несколько</button>
+        <button class="quiz-type-tab" id="addTypeBtn_match" onclick="setAddQType('match')">Сопоставление</button>
+      </div>
+
+      <div class="admin-form-row">
+        <label class="admin-label">Тема</label>
+        <select class="admin-select" id="addQTheme">
+          <option value="sociology">👥 Социология</option>
+          <option value="politics">🏛️ Политология</option>
+          <option value="economics">💰 Экономика</option>
+          <option value="law">⚖️ Право</option>
+          <option value="philosophy">🧠 Философия</option>
+          <option value="culturology">🎨 Культурология</option>
+        </select>
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Подтема (например: Классики социологии)</label>
+        <input type="text" class="admin-input" id="addQSubtopic" placeholder="Уточни тему">
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Олимпиада</label>
+        <select class="admin-select" id="addQOlympiad">
+          <option value="vsosh">ВсОШ</option>
+          <option value="vp_obsh" selected>ВП (Общество)</option>
+          <option value="lomonosov">Ломоносов</option>
+          <option value="vp_soc">ВП (Социология)</option>
+          <option value="izumrud">Изумруд</option>
+        </select>
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Год</label>
+        <input type="number" class="admin-input" id="addQYear" placeholder="2024" min="2010" max="2030">
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Текст вопроса</label>
+        <textarea class="admin-textarea" id="addQText" placeholder="Введи вопрос..." style="min-height:80px"></textarea>
+      </div>
+
+      <div id="addQOptionsBlock">
+        <div class="admin-form-row">
+          <label class="admin-label">Варианты ответов (по одному в строку)</label>
+          <textarea class="admin-textarea" id="addQOptions" placeholder="А) Первый вариант&#10;Б) Второй вариант&#10;В) Третий вариант&#10;Г) Четвёртый вариант"></textarea>
+        </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Правильный ответ (например: В или А,В для нескольких)</label>
+          <input type="text" class="admin-input" id="addQCorrect" placeholder="В">
+        </div>
+      </div>
+
+      <div id="addQMatchBlock" style="display:none">
+        <div class="admin-form-row">
+          <label class="admin-label">Пары сопоставления (термин|определение, каждая с новой строки)</label>
+          <textarea class="admin-textarea" id="addQPairs" placeholder="Социализация|Процесс усвоения норм&#10;Девиация|Отклонение от нормы&#10;Стратификация|Социальное расслоение" style="min-height:100px"></textarea>
+        </div>
+      </div>
+
+      <div class="admin-form-row">
+        <label class="admin-label">Объяснение правильного ответа</label>
+        <textarea class="admin-textarea" id="addQExplanation" placeholder="Почему именно этот ответ верный..."></textarea>
+      </div>
+
+      <button class="admin-btn blue" onclick="adminAddQuestion()">➕ Добавить вопрос</button>
+    </div>
+  </div>
+
+  <div class="admin-section" id="adminSectionQuizStats">
+    <button class="admin-section-header" onclick="toggleAdminSection('adminSectionQuizStats')">
+      <div class="admin-section-title">📊 Статистика тестов учеников</div>
+      <span class="admin-section-arrow">▼</span>
+    </button>
+    <div class="admin-section-body">
+      <div id="adminQuizStats">
+        <div style="font-size:12px;color:var(--text3);font-weight:600">Загрузка...</div>
+      </div>
+      <button class="admin-btn blue" style="margin-top:8px" onclick="adminLoadQuizStats()">🔄 Обновить</button>
+    </div>
+  </div>
+
+  <div class="admin-section" id="adminSectionQuestionList">
+    <button class="admin-section-header" onclick="toggleAdminSection('adminSectionQuestionList')">
+      <div class="admin-section-title">📝 Все вопросы в базе</div>
+      <span class="admin-section-arrow">▼</span>
+    </button>
+    <div class="admin-section-body">
+      <div class="admin-form-row">
+        <input type="text" class="admin-input" id="qSearchInput" placeholder="🔍 Поиск по тексту или теме..." oninput="renderAdminQuestionList()">
+      </div>
+      <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:8px" id="qListCount"></div>
+      <div id="adminQuestionList"></div>
+    </div>
+  </div>
+
+  <div id="editQModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.5);overflow-y:auto;padding:20px">
+    <div style="background:white;border-radius:20px;padding:20px;max-width:460px;margin:0 auto">
+      <div style="font-family:Unbounded,sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:16px">✏️ Редактировать вопрос</div>
+
+      <div class="admin-form-row">
+        <label class="admin-label">Тема</label>
+        <select class="admin-select" id="editQTheme">
+          <option value="sociology">👥 Социология</option>
+          <option value="politics">🏛️ Политология</option>
+          <option value="economics">💰 Экономика</option>
+          <option value="law">⚖️ Право</option>
+          <option value="philosophy">🧠 Философия</option>
+          <option value="culturology">🎨 Культурология</option>
+        </select>
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Подтема</label>
+        <input type="text" class="admin-input" id="editQSubtopic">
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Олимпиада</label>
+        <select class="admin-select" id="editQOlympiad">
+          <option value="vsosh">ВсОШ</option>
+          <option value="vp_obsh">ВП (Общество)</option>
+          <option value="lomonosov">Ломоносов</option>
+          <option value="vp_soc">ВП (Социология)</option>
+          <option value="izumrud">Изумруд</option>
+        </select>
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Год</label>
+        <input type="number" class="admin-input" id="editQYear">
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Текст вопроса</label>
+        <textarea class="admin-textarea" id="editQText" style="min-height:80px"></textarea>
+      </div>
+      <div id="editQOptionsBlock">
+        <div class="admin-form-row">
+          <label class="admin-label">Варианты ответов (по одному в строку)</label>
+          <textarea class="admin-textarea" id="editQOptions"></textarea>
+        </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Правильный ответ</label>
+          <input type="text" class="admin-input" id="editQCorrect">
+        </div>
+      </div>
+      <div id="editQMatchBlock" style="display:none">
+        <div class="admin-form-row">
+          <label class="admin-label">Пары (термин|определение, каждая с новой строки)</label>
+          <textarea class="admin-textarea" id="editQPairs" style="min-height:100px"></textarea>
+        </div>
+      </div>
+      <div class="admin-form-row">
+        <label class="admin-label">Объяснение</label>
+        <textarea class="admin-textarea" id="editQExplanation"></textarea>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button class="admin-btn blue" style="flex:2" onclick="adminSaveQuestion()">💾 Сохранить</button>
+        <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="closeEditQModal()">Отмена</button>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:8px 0 16px">
+    <button class="admin-btn danger" style="width:auto;padding:10px 24px" onclick="adminLogout()">🚪 Выйти из режима админа</button>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════ QUIZ TAB ══════════════════════════════════ -->
+<div class="tab-content" id="tab-quiz">
+
+  <!-- Stats row -->
+  <div class="quiz-stats-row">
+    <div class="quiz-stat-card">
+      <div class="quiz-stat-val" id="quizStatTotal">0</div>
+      <div class="quiz-stat-lbl">Вопросов</div>
+    </div>
+    <div class="quiz-stat-card">
+      <div class="quiz-stat-val" id="quizStatCorrect">0</div>
+      <div class="quiz-stat-lbl">Правильно</div>
+    </div>
+    <div class="quiz-stat-card">
+      <div class="quiz-stat-val" id="quizStatPct">0%</div>
+      <div class="quiz-stat-lbl">Точность</div>
+    </div>
+  </div>
+
+  <!-- Mode selector -->
+  <div class="section-title">🎯 Режим тренировки</div>
+  <div class="quiz-mode-grid" style="margin-bottom:14px">
+    <div class="quiz-mode-card active" id="modeRandom" onclick="setQuizMode('random')">
+      <div class="quiz-mode-icon">🎲</div>
+      <div class="quiz-mode-name">Случайные</div>
+      <div class="quiz-mode-desc">Микс из базы</div>
+    </div>
+    <div class="quiz-mode-card" id="modeWeak" onclick="setQuizMode('weak')">
+      <div class="quiz-mode-icon">🎯</div>
+      <div class="quiz-mode-name">Слабые темы</div>
+      <div class="quiz-mode-desc">AI подбирает</div>
+    </div>
+    <div class="quiz-mode-card" id="modeTheme" onclick="setQuizMode('theme')">
+      <div class="quiz-mode-icon">📚</div>
+      <div class="quiz-mode-name">По теме</div>
+      <div class="quiz-mode-desc">Выбери предмет</div>
+    </div>
+    <div class="quiz-mode-card" id="modeOlympiad" onclick="setQuizMode('olympiad')">
+      <div class="quiz-mode-icon">🏆</div>
+      <div class="quiz-mode-name">По олимпиаде</div>
+      <div class="quiz-mode-desc">Ломоносов, ВсОШ...</div>
+    </div>
+  </div>
+
+  <!-- Theme filter (hidden by default) -->
+  <div id="quizThemeFilter" style="display:none;margin-bottom:12px">
+    <div class="quiz-filter-row">
+      <button class="quiz-filter-btn active" onclick="setQuizFilter('theme','all')">Все</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','sociology')">👥 Социология</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','politics')">🏛️ Политология</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','economics')">💰 Экономика</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','law')">⚖️ Право</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','philosophy')">🧠 Философия</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','culturology')">🎨 Культурология</button>
+    </div>
+  </div>
+
+  <!-- Olympiad filter (hidden by default) -->
+  <div id="quizOlympiadFilter" style="display:none;margin-bottom:12px">
+    <div class="quiz-filter-row">
+      <button class="quiz-filter-btn active" onclick="setQuizFilter('olympiad','all')">Все</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('olympiad','vsosh')">ВсОШ</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('olympiad','vp_obsh')">ВП (Общество)</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('olympiad','lomonosov')">Ломоносов</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('olympiad','vp_soc')">ВП (Социология)</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('olympiad','izumrud')">Изумруд</button>
+    </div>
+  </div>
+
+  <!-- Weak themes list -->
+  <div id="quizWeakList" style="display:none;margin-bottom:14px">
+    <div class="section-title">📊 Твои слабые темы</div>
+    <div id="weakThemesList"></div>
+  </div>
+
+  <!-- Question area -->
+  <div id="quizQuestionArea">
+    <div class="empty-state">
+      <div class="e-icon">🧪</div>
+      <div>Нажми кнопку ниже чтобы начать!</div>
+    </div>
+  </div>
+
+  <!-- Start / Next button -->
+  <button class="quiz-btn primary" id="quizStartBtn" onclick="quizNext()" style="width:100%;margin-top:8px">
+    Начать тест →
+  </button>
+
+</div>
+
+</div><!-- /main -->
+
+<script>
+// ═══════════════════════════════════════════════════
+//  DATA
+// ═══════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════
+//  СЕРВЕР — Яндекс Cloud Functions (работает из России)
+// ═══════════════════════════════════════════════════
+const SERVER_URL = 'https://functions.yandexcloud.net/d4evsqthteafbgu33s0b';
+
+const SPRINT_START = new Date('2026-03-30');
+const SPRINT_END   = new Date('2026-11-30');
+const DEFAULT_COURSE_ID = 'course_default';
+const COURSE_META_PATH = 'courses';
+const COURSE_DATA_ROOT = 'course_data';
+const USER_SETTINGS_ROOT = 'users';
+const LEGACY_CACHE_KEY = 'mk_tracker_v2';
+const COURSE_CACHE_PREFIX = 'mk_tracker_v2::';
+const COURSE_PREFS_KEY = 'mk_selected_course';
+
+const CATEGORIES = {
+  sociology:    { name: 'Социология',    color: '#64AFDC', dot: '#64AFDC', icon: '👥' },
+  politics:     { name: 'Политология',   color: '#7BC8E0', dot: '#7BC8E0', icon: '🏛️' },
+  economics:    { name: 'Экономика',     color: '#5BB8A8', dot: '#5BB8A8', icon: '💰' },
+  law:          { name: 'Право',         color: '#8BAFD0', dot: '#8BAFD0', icon: '⚖️' },
+  philosophy:   { name: 'Философия',     color: '#A0C4D8', dot: '#A0C4D8', icon: '🧠' },
+  culturology:  { name: 'Культурология', color: '#6BBFCE', dot: '#6BBFCE', icon: '🎨' },
+  crossdiscipline:{ name: 'Кросс',       color: '#90CADC', dot: '#90CADC', icon: '🔗' },
+};
+
+const EVENT_TYPES = {
+  lecture:  { label: 'Лекция',  icon: '📚', color: '#64AFDC', bg: '#EEF8FF', border: '#AFDCFA' },
+  seminar:  { label: 'Семинар', icon: '🗣️', color: '#5BB8A8', bg: '#F0FFFA', border: '#BDEBDD' },
+  exam:     { label: 'Зачёт',   icon: '📝', color: '#8B6FD6', bg: '#F6F1FF', border: '#D8C8FF' },
+  deadline: { label: 'Дедлайн', icon: '⏰', color: '#F5A623', bg: '#FFF3E0', border: '#FFD180' },
+};
+
+function normalizeEventType(type) {
+  if (type === 'event' || !type) return 'lecture';
+  return EVENT_TYPES[type] ? type : 'lecture';
+}
+
+function getEventTypeMeta(type) {
+  return EVENT_TYPES[normalizeEventType(type)] || EVENT_TYPES.lecture;
+}
+
+// All tasks distributed across 35 weeks (30 March – 30 November)
+// Week 1 = 30 March – 5 April, etc.
+const ALL_TASKS = [];
+
+const REWARDS = [
+  { id:'r1', icon:'🛌', name:'День полного безделья',          cond:'Закрой первую неделю (все задачи)',  target:4,  type:'week1' },
+  { id:'r2', icon:'📖', name:'Книга по социологии',            cond:'Выполни 25% задач',                 target:22, type:'done' },
+  { id:'r3', icon:'👩‍🏫', name:'Индивидуальное занятие с куратором', cond:'Выполни 50% задач',           target:45, type:'done' },
+  { id:'r4', icon:'👕', name:'Футболка МК',                    cond:'Выполни 80% всех задач',            target:71, type:'done' },
+];
+
+const LEVELS = [
+  { level:1, rank:'Новичок',  xpMin:0,    xpMax:100  },
+  { level:2, rank:'Ученик',   xpMin:100,  xpMax:250  },
+  { level:3, rank:'Боец',     xpMin:250,  xpMax:500  },
+  { level:4, rank:'Мастер',   xpMin:500,  xpMax:900  },
+  { level:5, rank:'Легенда',  xpMin:900,  xpMax:9999 },
+];
+
+const ACHIEVEMENTS = [
+  // Visible
+  { id:'a1', icon:'🌟', name:'Первый шаг',   desc:'Выполни первую задачу',           secret:false, target:1,  type:'done' },
+  { id:'a2', icon:'🔥', name:'Пятёрочник',   desc:'Выполни 5 задач',                 secret:false, target:5,  type:'done' },
+  { id:'a3', icon:'💪', name:'На полпути',   desc:'Выполни 50% задач',               secret:false, target:45, type:'done' },
+  { id:'a4', icon:'🏆', name:'Чемпион',      desc:'Выполни все задачи',              secret:false, target:89, type:'done' },
+  // Secret
+  { id:'a5', icon:'🔮', name:'Ночной учёный', desc:'Выполни задачу после 22:00',     secret:true,  target:1,  type:'night' },
+  { id:'a6', icon:'⚡', name:'Спринтер',      desc:'Выполни 3 задачи за один день',  secret:true,  target:3,  type:'day3' },
+  { id:'a7', icon:'📚', name:'Книгочей',      desc:'Закрой блок Философии полностью',secret:true,  target:7,  type:'cat_philosophy' },
+  { id:'a8', icon:'👑', name:'Легенда МК',    desc:'Достигни ранга Легенда',         secret:true,  target:1,  type:'rank5' },
+];
+
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+function createDefaultState() {
+  return {
+    done: {},
+    doneTimestamps: {},
+    streak: 0,
+    lastStreakDate: null,
+    totalXP: 0,
+    level: 1,
+    rank: 'Новичок',
+    charStage: 0,
+    unlockedAchievements: {},
+    todayDone: 0,
+    currentWeek: 1,
+  };
+}
+
+let state = createDefaultState();
+let courseCatalog = {};
+let availableCourses = [];
+let currentCourse = null;
+let selectedCourseId = DEFAULT_COURSE_ID;
+let courseSubscriptions = [];
+let courseCatalogReadyResolver = null;
+let courseContextReady = false;
+const courseCatalogReady = new Promise(resolve => { courseCatalogReadyResolver = resolve; });
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getDefaultCourse() {
+  return {
+    id: DEFAULT_COURSE_ID,
+    name: 'Основной курс',
+    shortName: 'Основной курс',
+    description: 'Текущий основной поток',
+    sortOrder: 0,
+    active: true,
+    legacyCompat: true,
+    startDate: SPRINT_START.toISOString().slice(0, 10),
+    endDate: SPRINT_END.toISOString().slice(0, 10),
+  };
+}
+
+function normalizeCourse(courseId, raw = {}) {
+  const fallback = getDefaultCourse();
+  return {
+    ...fallback,
+    ...raw,
+    id: courseId || raw.id || fallback.id,
+    name: raw.name || fallback.name,
+    shortName: raw.shortName || raw.name || fallback.shortName,
+    description: raw.description || '',
+    active: raw.active !== false,
+    legacyCompat: raw.legacyCompat === true || courseId === DEFAULT_COURSE_ID,
+    sortOrder: Number.isFinite(raw.sortOrder) ? raw.sortOrder : fallback.sortOrder,
+    startDate: raw.startDate || fallback.startDate,
+    endDate: raw.endDate || fallback.endDate,
+  };
+}
+
+function getSortedCourses(list = Object.values(courseCatalog)) {
+  return [...list].sort((a, b) => {
+    const byOrder = (a.sortOrder || 0) - (b.sortOrder || 0);
+    if (byOrder !== 0) return byOrder;
+    return String(a.name || '').localeCompare(String(b.name || ''), 'ru');
+  });
+}
+
+function getCourseById(courseId = selectedCourseId) {
+  return courseCatalog[courseId] || normalizeCourse(courseId || DEFAULT_COURSE_ID, {});
+}
+
+function getCurrentCourseLabel() {
+  return getCourseById(selectedCourseId)?.shortName || 'Курс';
+}
+
+function getCourseStartDate() {
+  const value = getCourseById(selectedCourseId)?.startDate;
+  return value ? new Date(value) : new Date(SPRINT_START);
+}
+
+function getCourseEndDate() {
+  const value = getCourseById(selectedCourseId)?.endDate;
+  return value ? new Date(value) : new Date(SPRINT_END);
+}
+
+function isLegacyCompatCourse(courseId = selectedCourseId) {
+  return !!getCourseById(courseId)?.legacyCompat;
+}
+
+function getProgressCacheKey(courseId = selectedCourseId) {
+  return `${COURSE_CACHE_PREFIX}${courseId}`;
+}
+
+function getCourseCollectionPath(collection, courseId = selectedCourseId) {
+  return `${COURSE_DATA_ROOT}/${courseId}/${collection}`;
+}
+
+function getProgressPath(uid, courseId = selectedCourseId) {
+  return `progress/${courseId}/${uid}`;
+}
+
+function getLegacyProgressPath(uid) {
+  return `progress/${uid}`;
+}
+
+function getQuizResultsPath(uid, courseId = selectedCourseId) {
+  return `quiz_results/${courseId}/${uid}`;
+}
+
+function getLegacyQuizResultsPath(uid) {
+  return `quiz_results/${uid}`;
+}
+
+function getStudentsPath(courseId = selectedCourseId) {
+  return `students/${courseId}`;
+}
+
+function getLegacyStudentsPath() {
+  return 'students';
+}
+
+function getUserSettingsPath(uid) {
+  return `${USER_SETTINGS_ROOT}/${uid}`;
+}
+
+function renderCourseControls() {
+  const btn = document.getElementById('courseSwitcherBtn');
+  const label = document.getElementById('courseSwitcherLabel');
+  const adminNote = document.getElementById('adminCourseNote');
+  if (label) label.textContent = getCurrentCourseLabel();
+  if (btn) btn.classList.toggle('visible', !!currentUser && availableCourses.length > 1);
+  if (adminNote) adminNote.textContent = `Курс: ${getCourseById(selectedCourseId).name}`;
+}
+
+// ═══════════════════════════════════════════════════
+//  STORAGE — Firebase (основное) + localStorage (кэш)
+//  Прогресс привязан к email-аккаунту, работает везде:
+//  Telegram, MAX, браузер — один и тот же прогресс
+// ═══════════════════════════════════════════════════
+const TG = window.Telegram?.WebApp;
+
+function saveState() {
+  const data = JSON.stringify(state);
+  localStorage.setItem(getProgressCacheKey(), data);
+  if (db && currentUser) {
+    saveProgressToFirebase();
+  }
+}
+
+function loadStateFromCache(courseId = selectedCourseId) {
+  const scoped = localStorage.getItem(getProgressCacheKey(courseId));
+  const legacy = isLegacyCompatCourse(courseId) ? localStorage.getItem(LEGACY_CACHE_KEY) : null;
+  const raw = scoped || legacy;
+  state = createDefaultState();
+  if (raw) {
+    try { state = { ...state, ...JSON.parse(raw) }; } catch (e) {}
+  }
+  state.currentWeek = state.currentWeek || getCurrentWeekNum();
+}
+
+// ═══════════════════════════════════════════════════
+//  COMPUTED
+// ═══════════════════════════════════════════════════
+function getDoneCount() { return Object.keys(state.done).filter(k => state.done[k]).length; }
+function getTotalXP() { return getAllTasks().filter(t => state.done[t.id]).reduce((s,t)=>s+t.xp,0); }
+function normalizeDate(d) {
+  const x = new Date(d);
+  x.setHours(0,0,0,0);
+  return x;
+}
+function isCourseStarted() {
+  return normalizeDate(new Date()) >= normalizeDate(getCourseStartDate());
+}
+function getDaysUntilStart() {
+  const now = normalizeDate(new Date());
+  const start = normalizeDate(getCourseStartDate());
+  return Math.max(0, Math.ceil((start - now) / (24*3600*1000)));
+}
+function formatStartDate() {
+  return getCourseStartDate().toLocaleDateString('ru-RU', { day:'numeric', month:'long' });
+}
+function getCurrentWeekNum() {
+  if (!isCourseStarted()) return 0;
+  const now = normalizeDate(new Date());
+  const start = normalizeDate(getCourseStartDate());
+  const diff = Math.floor((now - start) / (7*24*3600*1000));
+  return Math.min(Math.max(1, diff + 1), 35);
+}
+function getWeekDates(w) {
+  const d = new Date(getCourseStartDate());
+  d.setDate(d.getDate() + (w-1)*7);
+  const end = new Date(d); end.setDate(end.getDate()+6);
+  const fmt = d => d.toLocaleDateString('ru-RU', {day:'numeric',month:'short'});
+  return `${fmt(d)} – ${fmt(end)}`;
+}
+function getLevelInfo(xp) {
+  for (let i = LEVELS.length-1; i >= 0; i--) {
+    if (xp >= LEVELS[i].xpMin) return LEVELS[i];
+  }
+  return LEVELS[0];
+}
+function getAllTasks() { return [...ALL_TASKS, ...(firebaseTasks || [])]; }
+function getCatDone(cat) { return getAllTasks().filter(t=>t.cat===cat && state.done[t.id]).length; }
+function getCatTotal(cat){ return getAllTasks().filter(t=>t.cat===cat).length; }
+
+function cleanupCourseSubscriptions() {
+  courseSubscriptions.forEach(unsub => {
+    try { unsub(); } catch (e) {}
+  });
+  courseSubscriptions = [];
+}
+
+function subscribeCourseAwareValue(scopedPath, legacyPath, onValue) {
+  if (!db) return () => {};
+  let scopedHasData = false;
+  const scopedRef = db.ref(scopedPath);
+  const scopedHandler = snap => {
+    scopedHasData = snap.exists();
+    if (scopedHasData || !legacyPath) onValue(snap.val(), false);
+  };
+  scopedRef.on('value', scopedHandler);
+
+  let legacyRef = null;
+  let legacyHandler = null;
+  if (legacyPath) {
+    legacyRef = db.ref(legacyPath);
+    legacyHandler = snap => {
+      if (!scopedHasData) onValue(snap.val(), true);
+    };
+    legacyRef.on('value', legacyHandler);
+  }
+
+  return () => {
+    scopedRef.off('value', scopedHandler);
+    if (legacyRef && legacyHandler) legacyRef.off('value', legacyHandler);
+  };
+}
+
+function readCourseAwareOnce(scopedPath, legacyPath) {
+  if (!db) return Promise.resolve({ value: null, usedLegacy: false });
+  return db.ref(scopedPath).once('value').then(snap => {
+    if (snap.exists() || !legacyPath) {
+      return { value: snap.val(), usedLegacy: false };
+    }
+    return db.ref(legacyPath).once('value').then(legacySnap => ({
+      value: legacySnap.val(),
+      usedLegacy: legacySnap.exists(),
+    }));
+  });
+}
+
+function getAvailableCoursesForUser(userSettings = {}) {
+  const allCourses = getSortedCourses();
+  if (isAdmin) return allCourses;
+
+  const rawAllowed = userSettings.courses || userSettings.availableCourses || null;
+  const allowedIds = Array.isArray(rawAllowed)
+    ? rawAllowed
+    : rawAllowed && typeof rawAllowed === 'object'
+      ? Object.keys(rawAllowed).filter(id => rawAllowed[id])
+      : [];
+
+  const filtered = allowedIds.length
+    ? allCourses.filter(course => allowedIds.includes(course.id))
+    : allCourses.filter(course => course.active !== false);
+
+  return filtered.length ? filtered : [getDefaultCourse()];
+}
+
+async function persistSelectedCourse(courseId) {
+  if (!db || !currentUser) return;
+  const path = getUserSettingsPath(currentUser.uid);
+  const updates = {
+    selectedCourseId: courseId,
+    currentCourseId: courseId,
+    updatedAt: Date.now(),
+  };
+  await db.ref(path).update(updates);
+  localStorage.setItem(COURSE_PREFS_KEY, courseId);
+}
+
+function updateCourseDependentViews() {
+  renderCourseControls();
+  renderAll();
+  renderCalendar();
+  renderQuizStats();
+  renderWeakThemes();
+  if (document.getElementById('tab-admin').classList.contains('active')) {
+    renderAdminEvents();
+    adminLoadStudents();
+    adminLoadQuizStats();
+    renderAdminQuestionList();
+    renderTaskEditorWeekOptions();
+    renderTaskEditorList();
+  }
+}
+
+async function loadCourseProgress(courseId = selectedCourseId) {
+  loadStateFromCache(courseId);
+  if (!db || !currentUser) {
+    updateCourseDependentViews();
+    return;
+  }
+
+  const scopedPath = getProgressPath(currentUser.uid, courseId);
+  const legacyPath = isLegacyCompatCourse(courseId) ? getLegacyProgressPath(currentUser.uid) : null;
+  const { value } = await readCourseAwareOnce(scopedPath, legacyPath);
+
+  if (value?.data) {
+    try {
+      state = { ...createDefaultState(), ...JSON.parse(value.data) };
+    } catch (e) {
+      state = { ...createDefaultState(), ...state };
+    }
+  }
+
+  state.currentWeek = state.currentWeek || getCurrentWeekNum();
+  localStorage.setItem(getProgressCacheKey(courseId), JSON.stringify(state));
+  if (isLegacyCompatCourse(courseId)) localStorage.setItem(LEGACY_CACHE_KEY, JSON.stringify(state));
+  updateCourseDependentViews();
+}
+
+function subscribeCourseCollections(courseId = selectedCourseId) {
+  cleanupCourseSubscriptions();
+
+  courseSubscriptions.push(
+    subscribeCourseAwareValue(
+      getCourseCollectionPath('calendar_events', courseId),
+      isLegacyCompatCourse(courseId) ? 'calendar_events' : null,
+      value => {
+        firebaseEvents = value || {};
+        if (document.getElementById('tab-calendar').classList.contains('active')) renderCalendar();
+        if (isAdmin && document.getElementById('tab-admin').classList.contains('active')) renderAdminEvents();
+      }
+    )
+  );
+
+  courseSubscriptions.push(
+    subscribeCourseAwareValue(
+      getCourseCollectionPath('tasks', courseId),
+      isLegacyCompatCourse(courseId) ? 'tasks' : null,
+      value => {
+        firebaseTasks = value ? Object.entries(value).map(([key, item]) => ({ ...item, id: item.id || key })) : [];
+        renderTasks();
+        renderTaskEditorWeekOptions();
+        renderTaskEditorList();
+      }
+    )
+  );
+
+  courseSubscriptions.push(
+    subscribeCourseAwareValue(
+      getCourseCollectionPath('questions', courseId),
+      isLegacyCompatCourse(courseId) ? 'questions' : null,
+      value => {
+        quizQuestions = value ? Object.values(value).map(q => ({ ...q, olympiad: normalizeOlympiadValue(q.olympiad) })) : [];
+        renderAdminQuestionList();
+      }
+    )
+  );
+
+  if (currentUser) {
+    courseSubscriptions.push(
+      subscribeCourseAwareValue(
+        getQuizResultsPath(currentUser.uid, courseId),
+        isLegacyCompatCourse(courseId) ? getLegacyQuizResultsPath(currentUser.uid) : null,
+        value => {
+          quizResults = value || {};
+          renderQuizStats();
+          if (quizMode === 'weak') renderWeakThemes();
+        }
+      )
+    );
+  }
+}
+
+async function switchCourse(courseId, options = {}) {
+  const nextCourseId = courseId || DEFAULT_COURSE_ID;
+  const isSameCourse = nextCourseId === selectedCourseId && courseContextReady;
+  if (isSameCourse) {
+    renderCourseControls();
+    return;
+  }
+
+  if (currentUser && courseContextReady) saveProgressToFirebase();
+
+  selectedCourseId = nextCourseId;
+  currentCourse = getCourseById(nextCourseId);
+  courseContextReady = true;
+  firebaseTasks = [];
+  firebaseEvents = {};
+  quizQuestions = [];
+  quizResults = {};
+  currentQuestion = null;
+  quizAnswered = false;
+
+  renderCourseControls();
+  subscribeCourseCollections(nextCourseId);
+  await loadCourseProgress(nextCourseId);
+
+  if (options.persist !== false) await persistSelectedCourse(nextCourseId);
+  if (!options.silent) showToast(`🎓 Курс: ${getCourseById(nextCourseId).shortName}`);
+}
+
+function renderCourseSheet() {
+  const items = availableCourses.map(course => `
+    <button class="course-option ${course.id === selectedCourseId ? 'active' : ''}" onclick="handleCourseOptionClick('${course.id}')">
+      <div class="course-option-main">
+        <div class="course-option-name">${escapeHtml(course.name)}</div>
+        <div class="course-option-meta">${escapeHtml(course.description || 'Курс доступен в профиле')}</div>
+      </div>
+      <div class="course-option-check">${course.id === selectedCourseId ? '✓' : ''}</div>
+    </button>
+  `).join('');
+
+  return `
+    <div class="course-sheet">
+      <div class="course-sheet-handle"></div>
+      <div class="course-sheet-title">Выбор курса</div>
+      <div class="course-sheet-subtitle">Интерфейс обновится автоматически после переключения.</div>
+      <div class="course-sheet-list">${items}</div>
+    </div>
+  `;
+}
+
+function openCourseSwitcher() {
+  if (!currentUser || availableCourses.length <= 1) return;
+  closeCourseSwitcher();
+  const overlay = document.createElement('div');
+  overlay.id = 'courseSwitcherOverlay';
+  overlay.className = 'course-sheet-overlay';
+  overlay.innerHTML = renderCourseSheet();
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) closeCourseSwitcher();
+  });
+  document.body.appendChild(overlay);
+}
+
+function closeCourseSwitcher() {
+  const overlay = document.getElementById('courseSwitcherOverlay');
+  if (overlay) overlay.remove();
+}
+
+async function handleCourseOptionClick(courseId) {
+  closeCourseSwitcher();
+  await switchCourse(courseId);
+}
+
+// ═══════════════════════════════════════════════════
+//  CHARACTER SVG STAGES
+// ═══════════════════════════════════════════════════
+function drawCharacter(stage) {
+  const svg = document.getElementById('character-svg');
+  const wrap = document.getElementById('charWrap');
+  wrap.className = 'character-wrap';
+  if (stage >= 1) wrap.classList.add(`char-aura-${Math.min(stage,4)}`);
+
+  const stages = [
+    // Stage 0 – basic silhouette
+    `<circle cx="45" cy="28" r="14" fill="#CAEAFF" stroke="#64AFDC" stroke-width="2"/>
+     <ellipse cx="45" cy="62" rx="18" ry="22" fill="#CAEAFF" stroke="#64AFDC" stroke-width="2"/>
+     <circle cx="38" cy="26" r="3" fill="#64AFDC"/>
+     <circle cx="52" cy="26" r="3" fill="#64AFDC"/>`,
+    // Stage 1 – equipped basic
+    `<circle cx="45" cy="28" r="14" fill="#AFDCFA" stroke="#64AFDC" stroke-width="2.5"/>
+     <ellipse cx="45" cy="62" rx="18" ry="22" fill="#AFDCFA" stroke="#64AFDC" stroke-width="2"/>
+     <circle cx="38" cy="26" r="3.5" fill="#64AFDC"/>
+     <circle cx="52" cy="26" r="3.5" fill="#64AFDC"/>
+     <rect x="38" y="14" width="14" height="6" rx="3" fill="#64AFDC" opacity="0.7"/>
+     <path d="M27 55 Q18 50 20 40 L27 45Z" fill="#AFDCFA" stroke="#64AFDC" stroke-width="1.5"/>
+     <path d="M63 55 Q72 50 70 40 L63 45Z" fill="#AFDCFA" stroke="#64AFDC" stroke-width="1.5"/>`,
+    // Stage 2 – armored
+    `<circle cx="45" cy="27" r="15" fill="#64AFDC" stroke="#3A8FBD" stroke-width="2.5"/>
+     <ellipse cx="45" cy="62" rx="20" ry="23" fill="#64AFDC" stroke="#3A8FBD" stroke-width="2"/>
+     <circle cx="38" cy="25" r="4" fill="white"/>
+     <circle cx="52" cy="25" r="4" fill="white"/>
+     <circle cx="38" cy="25" r="2" fill="#1A4F6E"/>
+     <circle cx="52" cy="25" r="2" fill="#1A4F6E"/>
+     <path d="M30 13 L45 8 L60 13 L57 22 L45 26 L33 22Z" fill="#3A8FBD" stroke="white" stroke-width="1"/>
+     <path d="M25 55 Q14 48 16 36 L26 43Z" fill="#3A8FBD" stroke="white" stroke-width="1"/>
+     <path d="M65 55 Q76 48 74 36 L64 43Z" fill="#3A8FBD" stroke="white" stroke-width="1"/>
+     <rect x="37" y="55" width="16" height="18" rx="2" fill="#3A8FBD" stroke="white" stroke-width="1"/>`,
+    // Stage 3 – master
+    `<circle cx="45" cy="27" r="15" fill="#1A6FA0" stroke="#0D4F75" stroke-width="2"/>
+     <ellipse cx="45" cy="63" rx="21" ry="23" fill="#1A6FA0" stroke="#0D4F75" stroke-width="2"/>
+     <circle cx="38" cy="25" r="4.5" fill="white"/>
+     <circle cx="52" cy="25" r="4.5" fill="white"/>
+     <circle cx="38" cy="25" r="2.5" fill="#AFDCFA"/>
+     <circle cx="52" cy="25" r="2.5" fill="#AFDCFA"/>
+     <polygon points="45,2 49,14 62,14 52,22 56,34 45,27 34,34 38,22 28,14 41,14" fill="#F5A623" stroke="#C47D00" stroke-width="1"/>
+     <path d="M22 56 Q9 47 12 32 L24 42Z" fill="#1A6FA0" stroke="#AFDCFA" stroke-width="1.5"/>
+     <path d="M68 56 Q81 47 78 32 L66 42Z" fill="#1A6FA0" stroke="#AFDCFA" stroke-width="1.5"/>
+     <rect x="35" y="54" width="20" height="22" rx="3" fill="#0D4F75" stroke="#AFDCFA" stroke-width="1.5"/>
+     <rect x="40" y="58" width="10" height="6" rx="2" fill="#AFDCFA" opacity="0.6"/>`,
+    // Stage 4 – legend
+    `<defs>
+       <radialGradient id="hg" cx="50%" cy="50%" r="50%">
+         <stop offset="0%" stop-color="#64AFDC"/>
+         <stop offset="100%" stop-color="#0D4F75"/>
+       </radialGradient>
+     </defs>
+     <circle cx="45" cy="27" r="16" fill="url(#hg)" stroke="#F5A623" stroke-width="2.5"/>
+     <ellipse cx="45" cy="63" rx="22" ry="24" fill="url(#hg)" stroke="#F5A623" stroke-width="2"/>
+     <circle cx="38" cy="25" r="5" fill="white"/>
+     <circle cx="52" cy="25" r="5" fill="white"/>
+     <circle cx="38" cy="25" r="3" fill="#F5A623"/>
+     <circle cx="52" cy="25" r="3" fill="#F5A623"/>
+     <polygon points="45,-2 50,12 65,12 54,21 58,35 45,27 32,35 36,21 25,12 40,12" fill="#F5A623" stroke="#C47D00" stroke-width="1.5"/>
+     <path d="M20 58 Q5 47 8 28 L22 42Z" fill="url(#hg)" stroke="#F5A623" stroke-width="2"/>
+     <path d="M70 58 Q85 47 82 28 L68 42Z" fill="url(#hg)" stroke="#F5A623" stroke-width="2"/>
+     <rect x="34" y="54" width="22" height="24" rx="4" fill="#0D3F5F" stroke="#F5A623" stroke-width="2"/>
+     <rect x="39" y="58" width="12" height="7" rx="2" fill="#F5A623" opacity="0.8"/>
+     <line x1="45" y1="4" x2="45" y2="-8" stroke="#F5A623" stroke-width="2"/>
+     <circle cx="45" cy="-10" r="4" fill="#F5A623"/>`,
+  ];
+
+  svg.innerHTML = stages[Math.min(stage, stages.length-1)];
+}
+
+function updateCharStage() {
+  const done = getDoneCount();
+  let stage = 0;
+  if (done >= 5) stage = 1;
+  if (done >= 20) stage = 2;
+  if (done >= 40) stage = 3;
+  if (done >= 70) stage = 4;
+  state.charStage = stage;
+  drawCharacter(stage);
+}
+
+// ═══════════════════════════════════════════════════
+//  XP POPUP
+// ═══════════════════════════════════════════════════
+function showXPPopup(xp, el) {
+  const popup = document.createElement('div');
+  popup.className = 'xp-popup';
+  popup.textContent = `+${xp} XP`;
+  const rect = el.getBoundingClientRect();
+  popup.style.left = (rect.left + rect.width/2 - 30) + 'px';
+  popup.style.top = (rect.top + window.scrollY - 10) + 'px';
+  document.body.appendChild(popup);
+  setTimeout(() => popup.remove(), 1200);
+
+  // Star particles
+  for (let i = 0; i < 5; i++) {
+    const star = document.createElement('div');
+    star.className = 'star-particle';
+    star.textContent = '⭐';
+    star.style.fontSize = '12px';
+    star.style.left = (rect.left + rect.width/2) + 'px';
+    star.style.top = (rect.top + window.scrollY) + 'px';
+    const angle = (i/5)*360;
+    const dist = 40 + Math.random()*30;
+    star.style.setProperty('--dx', Math.cos(angle*Math.PI/180)*dist + 'px');
+    star.style.setProperty('--dy', Math.sin(angle*Math.PI/180)*dist - 30 + 'px');
+    document.body.appendChild(star);
+    setTimeout(() => star.remove(), 800);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  LEVEL UP
+// ═══════════════════════════════════════════════════
+function showLevelup(rank) {
+  document.getElementById('levelupRankText').textContent = `Ты теперь: ${rank}!`;
+  const overlay = document.getElementById('levelupOverlay');
+  overlay.classList.add('show');
+}
+function closeLevelup() {
+  document.getElementById('levelupOverlay').classList.remove('show');
+}
+
+// ═══════════════════════════════════════════════════
+//  ACHIEVEMENTS CHECK
+// ═══════════════════════════════════════════════════
+function checkAchievements() {
+  const done = getDoneCount();
+  const xp = getTotalXP();
+  const level = getLevelInfo(xp);
+  const hour = new Date().getHours();
+  const todayKey = new Date().toDateString();
+
+  // count today
+  const dayDone = Object.keys(state.done).filter(id => {
+    return state.done[id] && state.doneTimestamps && state.doneTimestamps[id] &&
+      new Date(state.doneTimestamps[id]).toDateString() === todayKey;
+  }).length;
+
+  ACHIEVEMENTS.forEach(a => {
+    if (state.unlockedAchievements[a.id]) return;
+    let unlock = false;
+    if (a.type === 'done' && done >= a.target) unlock = true;
+    if (a.type === 'night' && hour >= 22 && done >= 1) unlock = true;
+    if (a.type === 'day3' && dayDone >= 3) unlock = true;
+    if (a.type === 'cat_philosophy') {
+      const philDone = getCatDone('philosophy');
+      const philTotal = getCatTotal('philosophy');
+      if (philDone >= philTotal && philTotal > 0) unlock = true;
+    }
+    if (a.type === 'rank5' && level.level >= 5) unlock = true;
+    if (unlock) state.unlockedAchievements[a.id] = true;
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  TASK TOGGLE
+// ═══════════════════════════════════════════════════
+function toggleTask(taskId, el) {
+  const task = getAllTasks().find(t => t.id === taskId);
+  if (!task) return;
+
+  const wasDone = !!state.done[taskId];
+  const prevXP = getTotalXP();
+  const prevLevel = getLevelInfo(prevXP);
+
+  state.done[taskId] = !wasDone;
+  if (!state.doneTimestamps) state.doneTimestamps = {};
+  if (state.done[taskId]) {
+    state.doneTimestamps[taskId] = new Date().toISOString();
+    showXPPopup(task.xp, el);
+  } else {
+    delete state.doneTimestamps[taskId];
+  }
+
+  const newXP = getTotalXP();
+  const newLevel = getLevelInfo(newXP);
+
+  checkAchievements();
+  updateCharStage();
+
+  if (newLevel.level > prevLevel.level) {
+    setTimeout(() => showLevelup(newLevel.rank), 300);
+  }
+
+  saveState();
+  renderAll();
+}
+
+// ═══════════════════════════════════════════════════
+//  STREAK
+// ═══════════════════════════════════════════════════
+function clickStreak() {
+  const today = new Date().toDateString();
+  if (state.lastStreakDate === today) return;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate()-1);
+  if (state.lastStreakDate === yesterday.toDateString()) {
+    state.streak++;
+  } else {
+    state.streak = 1;
+  }
+  state.lastStreakDate = today;
+  saveState();
+  document.getElementById('streakCount').textContent = state.streak;
+}
+
+// ═══════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════
+function renderHero() {
+  const xp = getTotalXP();
+  const li = getLevelInfo(xp);
+  const done = getDoneCount();
+
+  document.getElementById('heroLevel').textContent = li.level;
+  document.getElementById('heroRank').textContent = li.rank;
+  document.getElementById('totalXP').textContent = xp;
+  document.getElementById('streakCount').textContent = state.streak || 0;
+
+  const pct = li.level < 5
+    ? Math.round((xp - li.xpMin) / (li.xpMax - li.xpMin) * 100)
+    : 100;
+  document.getElementById('xpBarFill').style.width = pct + '%';
+  document.getElementById('xpBarLabel').textContent = li.level < 5
+    ? `${xp - li.xpMin} / ${li.xpMax - li.xpMin}`
+    : 'МАКС';
+
+  const total = getAllTasks().length;
+  const pctDone = total ? Math.round(done/total*100) : 0;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statPct').textContent = pctDone + '%';
+}
+
+function renderCurrentWeekPreview() {
+  const el = document.getElementById('currentWeekPreview');
+
+  if (!isCourseStarted()) {
+    const daysLeft = getDaysUntilStart();
+    el.innerHTML = `
+      <div class="empty-state">
+        <div class="e-icon">⏳</div>
+        Курс ещё не начался<br>
+        <span style="font-size:12px;color:var(--text3);font-weight:700">
+          Старт: ${formatStartDate()}${daysLeft ? ` · осталось ${daysLeft} дн.` : ''}
+        </span>
+      </div>`;
+    return;
+  }
+
+  const cw = getCurrentWeekNum();
+  const wTasks = getAllTasks().filter(t => t.week === cw);
+  const wDone = wTasks.filter(t => state.done[t.id]).length;
+  if (!wTasks.length) { el.innerHTML = '<div class="empty-state"><div class="e-icon">✅</div>Задач на эту неделю нет</div>'; return; }
+  el.innerHTML = `
+    <div class="week-nav" style="margin-bottom:8px">
+      <div class="week-info" style="text-align:left">
+        <div class="week-num">Неделя ${cw}</div>
+        <div class="week-dates">${getWeekDates(cw)}</div>
+      </div>
+      <div class="week-progress-mini">${wDone}/${wTasks.length} задач</div>
+    </div>
+    ${wTasks.slice(0,3).map(t => renderTaskHTML(t)).join('')}
+    ${wTasks.length > 3 ? `<div style="text-align:center;font-size:12px;color:var(--text3);font-weight:700;padding:8px;cursor:pointer" onclick="switchTab('tasks')">+ ещё ${wTasks.length-3} задач →</div>` : ''}
+  `;
+  el.querySelectorAll('.task-item').forEach(item => {
+    item.addEventListener('click', function(e) { toggleTask(this.dataset.id, this); });
+  });
+}
+
+function renderRecentBadges() {
+  const unlocked = ACHIEVEMENTS.filter(a => state.unlockedAchievements[a.id]);
+  const el = document.getElementById('recentBadges');
+  if (!unlocked.length) {
+    el.innerHTML = `<div class="empty-state"><div class="e-icon">🎯</div>Выполни первую задачу, чтобы получить достижение!</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="achievements-grid">${unlocked.slice(-4).map(a=>`
+    <div class="badge-card unlocked">
+      <div class="badge-icon">${a.icon}</div>
+      <div class="badge-name">${a.name}</div>
+    </div>`).join('')}</div>`;
+}
+
+function renderTaskHTML(t) {
+  const isDone = !!state.done[t.id];
+  const cat = CATEGORIES[t.cat];
+  return `<div class="task-item ${isDone?'done':''}" data-id="${t.id}">
+    <div class="task-check">
+      <span class="task-check-icon">✓</span>
+    </div>
+    <div class="task-body">
+      <div class="task-name">${t.name}</div>
+      <div class="task-meta">
+        <span class="task-xp-badge">+${t.xp} XP</span>
+        <span class="task-diff">${t.diff}</span>
+        ${cat ? `<span style="font-size:10px;color:${cat.color};font-weight:700">${cat.icon} ${cat.name}</span>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderTasks() {
+  const el = document.getElementById('tasksList');
+
+  if (!isCourseStarted()) {
+    const daysLeft = getDaysUntilStart();
+    document.getElementById('weekNum').textContent = 'Курс ещё не начался';
+    document.getElementById('weekDates').textContent = `Старт: ${formatStartDate()}`;
+    document.getElementById('weekProg').textContent = daysLeft ? `До старта ${daysLeft} дн.` : '';
+    el.innerHTML = '<div class="empty-state"><div class="e-icon">⏳</div>До старта курса отсчёт недель не идёт</div>';
+    return;
+  }
+
+  const w = state.currentWeek;
+  document.getElementById('weekNum').textContent = `Неделя ${w}`;
+  document.getElementById('weekDates').textContent = getWeekDates(w);
+
+  // Combine base tasks + admin-added tasks from Firebase
+  const allTasks = getAllTasks();
+  const wTasks = allTasks.filter(t => t.week === w);
+  const wDone = wTasks.filter(t => state.done[t.id]).length;
+  document.getElementById('weekProg').textContent = `${wDone} из ${wTasks.length} выполнено`;
+
+  const cats = [...new Set(wTasks.map(t => t.cat))];
+
+  if (!wTasks.length) {
+    el.innerHTML = '<div class="empty-state"><div class="e-icon">📭</div>На этой неделе задач нет</div>';
+    return;
+  }
+
+  el.innerHTML = cats.map(cat => {
+    const catTasks = wTasks.filter(t => t.cat === cat);
+    const catInfo = CATEGORIES[cat];
+    const catXP = catTasks.reduce((s,t) => s + t.xp, 0);
+    return `<div class="category-block">
+      <div class="cat-header">
+        <div class="cat-name">
+          <div class="cat-dot" style="background:${catInfo?.color||'#ccc'}"></div>
+          ${catInfo?.icon||''} ${catInfo?.name||cat}
+        </div>
+        <div class="cat-xp">${catXP} XP</div>
+      </div>
+      ${catTasks.map(t => renderTaskHTML(t)).join('')}
+    </div>`;
+  }).join('');
+
+  el.querySelectorAll('.task-item').forEach(item => {
+    item.addEventListener('click', function() { toggleTask(this.dataset.id, this); });
+  });
+}
+
+function renderProgress() {
+  const cats = Object.keys(CATEGORIES);
+  document.getElementById('categoryProgress').innerHTML = cats.map(cat => {
+    const total = getCatTotal(cat);
+    const done = getCatDone(cat);
+    const pct = total ? Math.round(done/total*100) : 0;
+    const catInfo = CATEGORIES[cat];
+    return `<div class="cat-progress-card">
+      <div class="cat-progress-header">
+        <div class="cat-progress-name">
+          <div class="cat-dot" style="background:${catInfo.color}"></div>
+          ${catInfo.icon} ${catInfo.name}
+        </div>
+        <div class="cat-progress-pct">${pct}%</div>
+      </div>
+      <div class="cat-bar">
+        <div class="cat-bar-fill" style="width:${pct}%;background:${catInfo.color}"></div>
+      </div>
+      <div class="cat-stats">${done} / ${total} задач</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('achievementsGrid').innerHTML = ACHIEVEMENTS.map(a => {
+    const unlocked = !!state.unlockedAchievements[a.id];
+    const done = getDoneCount();
+    let prog = 0, progMax = a.target;
+    if (a.type === 'done') prog = Math.min(done, a.target);
+    if (a.type === 'cat_philosophy') { prog = getCatDone('philosophy'); progMax = getCatTotal('philosophy'); }
+    if (a.type === 'rank5') { prog = getLevelInfo(getTotalXP()).level >= 5 ? 1 : 0; }
+
+    if (a.secret && !unlocked) {
+      return `<div class="badge-card secret">
+        <div class="badge-icon">❓</div>
+        <div class="badge-name">???</div>
+        <div class="badge-desc">Секретное достижение</div>
+      </div>`;
+    }
+    return `<div class="badge-card ${unlocked?'unlocked':''}">
+      <div class="badge-icon">${a.icon}</div>
+      <div class="badge-name">${a.name}</div>
+      <div class="badge-desc">${a.desc}</div>
+      ${!unlocked && progMax > 1 ? `
+        <div class="badge-prog">${prog} / ${progMax}</div>
+        <div class="badge-bar"><div class="badge-bar-fill" style="width:${Math.round(prog/progMax*100)}%"></div></div>
+      ` : unlocked ? '<div class="badge-prog" style="color:var(--success)">✅ Получено!</div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderRewards() {
+  const done = getDoneCount();
+  const week1Tasks = getAllTasks().filter(t => t.week === 1);
+  const week1Done = week1Tasks.filter(t => state.done[t.id]).length;
+  const total = getAllTasks().length;
+
+  document.getElementById('rewardsList').innerHTML = REWARDS.map(r => {
+    let prog = 0, progMax = r.target, unlocked = false;
+    if (r.type === 'done') { prog = Math.min(done, r.target); unlocked = done >= r.target; }
+    if (r.type === 'week1') { prog = week1Done; progMax = week1Tasks.length; unlocked = week1Tasks.length > 0 && week1Done >= week1Tasks.length; }
+    const pct = progMax ? Math.round(prog/progMax*100) : 0;
+    return `<div class="reward-card ${unlocked?'unlocked':''}">
+      <div class="reward-header">
+        <div class="reward-icon">${r.icon}</div>
+        <div class="reward-info">
+          <div class="reward-name">${r.name}</div>
+          <div class="reward-cond">${r.cond}</div>
+        </div>
+        <div class="reward-status">${unlocked ? '🎉 Разблокировано!' : `${pct}%`}</div>
+      </div>
+      <div class="reward-bar"><div class="reward-bar-fill" style="width:${pct}%"></div></div>
+      <div class="reward-prog">${prog} / ${progMax}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAll() {
+  renderHero();
+  renderCurrentWeekPreview();
+  renderRecentBadges();
+  renderTasks();
+  renderProgress();
+  renderRewards();
+  updateCharStage();
+}
+
+// ═══════════════════════════════════════════════════
+//  NAV
+// ═══════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  const tabs = ['home','tasks','calendar','progress','admin','quiz'];
+  const idx = tabs.indexOf(tab);
+  document.querySelectorAll('.nav-tab')[idx]?.classList.add('active');
+  if (tab === 'calendar') renderCalendar();
+  if (tab === 'admin') { renderAdminEvents(); adminLoadStudents(); adminLoadQuizStats(); renderAdminQuestionList(); renderTaskEditorWeekOptions(); renderTaskEditorList(); }
+  if (tab === 'quiz') { renderQuizStats(); if (quizMode === 'weak') renderWeakThemes(); }
+  if (tab !== 'tasks') renderAll();
+}
+
+function changeWeek(d) {
+  if (!isCourseStarted()) return;
+  state.currentWeek = Math.max(1, Math.min(35, state.currentWeek + d));
+  saveState();
+  renderTasks();
+}
+
+// ═══════════════════════════════════════════════════
+//  FIREBASE CONFIG
+//  dev / prod переключение без ручной правки всего файла
+// ═══════════════════════════════════════════════════
+const ENV = 'dev'; // 'dev' или 'prod'
+
+const FIREBASE_CONFIGS = {
+  dev: {
+    apiKey: "AIzaSyBIS14IVwTVsSfO64tuwRpUjVi_sXqEZK0",
+    authDomain: "dev1-668a8.firebaseapp.com",
+    databaseURL: "https://dev1-668a8-default-rtdb.firebaseio.com",
+    projectId: "dev1-668a8",
+    storageBucket: "dev1-668a8.firebasestorage.app",
+    messagingSenderId: "709334043230",
+    appId: "1:709334043230:web:5deda064c7de0cf07b42cf",
+    measurementId: "G-1GMXBF9J3D"
+  },
+  prod: {
+    apiKey: "AIzaSyDkalispfWTVINy6U1dGJ6hGPuelq9mg1k",
+    authDomain: "meinkurs-tracker.firebaseapp.com",
+    databaseURL: "https://meinkurs-tracker-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "meinkurs-tracker",
+    storageBucket: "meinkurs-tracker.firebasestorage.app",
+    messagingSenderId: "859829593991",
+    appId: "1:859829593991:web:2b3b5f4ff4019ec7cd5522"
+  }
+};
+
+const FIREBASE_CONFIG = FIREBASE_CONFIGS[ENV];
+
+// ═══════════════════════════════════════════════════
+//  ADMIN CONFIG
+//  Доступ по секретной ссылке: ?admin=ТВОЙ_КЛЮЧ
+//  ⚠️ Замени на свой ключ — любое слово/фраза без пробелов
+// ═══════════════════════════════════════════════════
+const ADMIN_SECRET_KEY = 'mk_admin_2025'; // <-- поменяй на свой ключ
+
+let db = null;
+let auth = null;
+let currentUser = null;
+let isAdmin = false;
+let calYear, calMonth;
+let firebaseEvents = {};
+let progressSaveInterval = null;
+let firebaseTasks = [];
+let taskEditorEditingId = null;
+
+// ═══════════════════════════════════════════════════
+//  AUTH SCREEN
+// ═══════════════════════════════════════════════════
+function switchAuthTab(tab) {
+  document.getElementById('authFormLogin').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('authFormReg').style.display  = tab === 'register' ? '' : 'none';
+  document.getElementById('authTabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('authTabReg').classList.toggle('active', tab === 'register');
+  document.getElementById('authError').textContent = '';
+}
+
+function setAuthError(msg) {
+  document.getElementById('authError').textContent = msg;
+}
+
+function setAuthLoading(id, loading) {
+  const btn = document.getElementById(id);
+  btn.disabled = loading;
+  btn.textContent = loading ? 'Подождите...' : (id === 'loginBtn' ? 'Войти →' : 'Создать аккаунт →');
+}
+
+function authLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPassword').value;
+  if (!email || !pass) { setAuthError('Заполни все поля'); return; }
+  if (!auth) { setAuthError('Firebase не инициализирован. Обнови страницу.'); return; }
+  setAuthLoading('loginBtn', true);
+  setAuthError('');
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(() => { setAuthLoading('loginBtn', false); })
+    .catch(e => {
+      setAuthLoading('loginBtn', false);
+      console.error('Auth error:', e.code, e.message);
+      const msgs = {
+        'auth/user-not-found': 'Аккаунт не найден. Зарегистрируйся!',
+        'auth/wrong-password': 'Неверный пароль',
+        'auth/invalid-email': 'Неверный формат email',
+        'auth/too-many-requests': 'Слишком много попыток. Подожди немного',
+        'auth/invalid-credential': 'Неверный email или пароль',
+        'auth/network-request-failed': 'Нет интернета. Проверь подключение.',
+        'auth/operation-not-allowed': '⚠️ Email/пароль не включён в Firebase. Включи в Authentication → Sign-in method.',
+      };
+      setAuthError(msgs[e.code] || `Ошибка: ${e.code}`);
+    });
+}
+
+function authRegister() {
+  const name  = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass  = document.getElementById('regPassword').value;
+  if (!name || !email || !pass) { setAuthError('Заполни все поля'); return; }
+  if (pass.length < 6) { setAuthError('Пароль минимум 6 символов'); return; }
+  setAuthLoading('registerBtn', true);
+  auth.createUserWithEmailAndPassword(email, pass)
+    .then(cred => cred.user.updateProfile({ displayName: name }))
+    .catch(e => {
+      setAuthLoading('registerBtn', false);
+      const msgs = {
+        'auth/email-already-in-use': 'Этот email уже зарегистрирован. Войди!',
+        'auth/invalid-email': 'Неверный формат email',
+        'auth/weak-password': 'Пароль слишком простой',
+      };
+      setAuthError(msgs[e.code] || 'Ошибка регистрации. Попробуй ещё раз');
+    });
+}
+
+function authResetPassword() {
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!email) { setAuthError('Введи email для сброса пароля'); return; }
+  auth.sendPasswordResetEmail(email)
+    .then(() => setAuthError('✅ Письмо отправлено! Проверь почту'))
+    .catch(() => setAuthError('Ошибка. Проверь правильность email'));
+}
+
+function authLogout() {
+  saveProgressToFirebase();
+  cleanupCourseSubscriptions();
+  localStorage.removeItem(LEGACY_CACHE_KEY);
+  localStorage.removeItem(COURSE_PREFS_KEY);
+  state = createDefaultState();
+  availableCourses = [];
+  currentCourse = getDefaultCourse();
+  selectedCourseId = DEFAULT_COURSE_ID;
+  renderCourseControls();
+  if (auth) auth.signOut();
+}
+
+// Account menu — показывается по кнопке ⇄ в шапке
+function showAccountMenu() {
+  const user = currentUser;
+  const menu = document.createElement('div');
+  menu.id = 'accountMenuOverlay';
+  menu.style.cssText = `position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,0.5);display:flex;align-items:flex-start;justify-content:flex-start;padding:70px 16px 0`;
+  menu.innerHTML = `
+    <div style="background:white;border-radius:16px;padding:16px;width:100%;max-width:320px;box-shadow:0 8px 40px rgba(0,0,0,0.2)">
+      <div style="font-family:Unbounded,sans-serif;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px">👤 Аккаунт</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px">${user?.displayName || '—'}</div>
+      <div style="font-size:11px;color:var(--text3);font-weight:600;margin-bottom:16px">${user?.email || '—'}</div>
+      <button onclick="closeAccountMenu();openCourseSwitcher()" style="width:100%;padding:12px;background:white;border:1.5px solid var(--border);border-radius:12px;font-family:Nunito,sans-serif;font-size:13px;font-weight:800;color:var(--text);cursor:pointer;margin-bottom:8px">
+        🎓 Курс: ${escapeHtml(getCurrentCourseLabel())}
+      </button>
+      <button onclick="closeAccountMenu();authLogout()" style="width:100%;padding:12px;background:var(--c5);border:1.5px solid var(--border);border-radius:12px;font-family:Nunito,sans-serif;font-size:13px;font-weight:800;color:var(--c1);cursor:pointer;margin-bottom:8px">
+        🔄 Сменить аккаунт
+      </button>
+      <button onclick="closeAccountMenu()" style="width:100%;padding:12px;background:none;border:none;font-family:Nunito,sans-serif;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer">
+        Отмена
+      </button>
+    </div>`;
+  menu.addEventListener('click', e => { if (e.target === menu) closeAccountMenu(); });
+  document.body.appendChild(menu);
+}
+
+function closeAccountMenu() {
+  const el = document.getElementById('accountMenuOverlay');
+  if (el) el.remove();
+}
+
+function showAuthScreen() {
+  document.getElementById('authScreen').style.display = 'flex';
+}
+
+function hideAuthScreen() {
+  const el = document.getElementById('authScreen');
+  el.style.opacity = '0';
+  el.style.transition = 'opacity 0.4s';
+  setTimeout(() => { el.style.display = 'none'; el.style.opacity = '1'; }, 400);
+}
+
+function onUserLoggedIn(user) {
+  currentUser = user;
+  hideAuthScreen();
+  if (progressSaveInterval) clearInterval(progressSaveInterval);
+  progressSaveInterval = setInterval(() => saveProgressToFirebase(), 30000);
+  updateHeaderUser(user);
+  courseCatalogReady.then(async () => {
+    const settingsSnap = await db.ref(getUserSettingsPath(user.uid)).once('value');
+    const settings = settingsSnap.val() || {};
+    availableCourses = getAvailableCoursesForUser(settings);
+    const preferredCourseId =
+      settings.selectedCourseId ||
+      settings.currentCourseId ||
+      localStorage.getItem(COURSE_PREFS_KEY) ||
+      availableCourses[0]?.id ||
+      DEFAULT_COURSE_ID;
+    renderCourseControls();
+    await switchCourse(preferredCourseId, { persist: false, silent: true });
+    hideLoading();
+  });
+}
+
+function onUserLoggedOut() {
+  currentUser = null;
+  cleanupCourseSubscriptions();
+  quizResults = {};
+  quizQuestions = [];
+  firebaseTasks = [];
+  firebaseEvents = {};
+  showAuthScreen();
+  renderCourseControls();
+  hideLoading();
+}
+
+function updateHeaderUser(user) {
+  const el = document.getElementById('headerUserName');
+  if (el) el.textContent = user.displayName || user.email;
+  renderCourseControls();
+}
+
+function saveProgressToFirebase() {
+  if (!db || !currentUser) return;
+  const uid = currentUser.uid;
+  const name = currentUser.displayName || currentUser.email.split('@')[0];
+  const data = JSON.stringify(state);
+  const payload = {
+    data,
+    updatedAt: Date.now(),
+    courseId: selectedCourseId,
+  };
+  const studentPayload = {
+    name,
+    done: getDoneCount(),
+    total: getAllTasks().length,
+    xp: getTotalXP(),
+    rank: getLevelInfo(getTotalXP()).rank,
+    streak: state.streak || 0,
+    updated: Date.now(),
+    courseId: selectedCourseId,
+    courseName: getCourseById(selectedCourseId).name,
+  };
+
+  const writes = [
+    db.ref(getProgressPath(uid, selectedCourseId)).set(payload),
+    db.ref(`${getStudentsPath(selectedCourseId)}/${uid}`).set(studentPayload),
+  ];
+
+  if (isLegacyCompatCourse()) {
+    writes.push(db.ref(getLegacyProgressPath(uid)).set(payload));
+    writes.push(db.ref(`${getLegacyStudentsPath()}/${uid}`).set(studentPayload));
+    localStorage.setItem(LEGACY_CACHE_KEY, data);
+  }
+
+  localStorage.setItem(getProgressCacheKey(selectedCourseId), data);
+  Promise.all(writes).catch(err => console.warn('saveProgressToFirebase error', err));
+}
+
+function initFirebase() {
+  try {
+    if (FIREBASE_CONFIG.apiKey === 'REPLACE_WITH_YOUR_API_KEY') {
+      console.warn('Firebase not configured');
+      hideLoading();
+      return;
+    }
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+    auth = firebase.auth();
+
+    // Auth state listener
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        onUserLoggedIn(user);
+      } else {
+        onUserLoggedOut();
+      }
+    });
+
+    db.ref(COURSE_META_PATH).on('value', snap => {
+      const data = snap.val() || {};
+      const normalized = Object.entries(data).reduce((acc, [courseId, value]) => {
+        acc[courseId] = normalizeCourse(courseId, value || {});
+        return acc;
+      }, {});
+      if (!normalized[DEFAULT_COURSE_ID]) normalized[DEFAULT_COURSE_ID] = getDefaultCourse();
+      courseCatalog = normalized;
+      if (courseCatalogReadyResolver) {
+        courseCatalogReadyResolver();
+        courseCatalogReadyResolver = null;
+      }
+      if (currentUser) {
+        db.ref(getUserSettingsPath(currentUser.uid)).once('value').then(settingsSnap => {
+          availableCourses = getAvailableCoursesForUser(settingsSnap.val() || {});
+          if (!availableCourses.some(course => course.id === selectedCourseId)) {
+            switchCourse(availableCourses[0]?.id || DEFAULT_COURSE_ID, { persist: false, silent: true });
+          } else {
+            renderCourseControls();
+          }
+        });
+      }
+    });
+  } catch(e) { console.warn('Firebase init error:', e); hideLoading(); }
+}
+
+// ─── Check admin (by saved session or URL param) ───
+function checkAdmin() {
+  const params = new URLSearchParams(window.location.search);
+  // ?logout=1 — быстрый сброс аккаунта через URL
+  if (params.get('logout') === '1') {
+    localStorage.removeItem('mk_is_admin');
+    localStorage.removeItem(LEGACY_CACHE_KEY);
+    localStorage.removeItem(COURSE_PREFS_KEY);
+    if (auth) auth.signOut();
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+  const keyFromUrl = params.get('admin');
+
+  // Check URL param first
+  if (keyFromUrl === ADMIN_SECRET_KEY) {
+    isAdmin = true;
+    localStorage.setItem('mk_is_admin', '1');
+  }
+
+  // Check localStorage (persists across sessions)
+  if (!isAdmin && localStorage.getItem('mk_is_admin') === '1') {
+    isAdmin = true;
+  }
+
+  if (isAdmin) {
+    showAdminTab();
+    if (keyFromUrl) setTimeout(() => showToast('👑 Режим админа активирован!'), 800);
+  } else {
+    // Show login button for non-admins
+      }
+}
+
+function showAdminTab() {
+  document.getElementById('adminTabBtn').style.display = '';
+  const lb = document.getElementById('adminLoginBtn');
+  if (lb) lb.style.display = 'none';
+}
+
+// ─── Admin modal ───
+function openAdminModal() {
+  // Если authScreen видим — временно скрываем чтобы модалка была поверх
+  const authScreen = document.getElementById('authScreen');
+  if (authScreen && authScreen.style.display !== 'none') {
+    authScreen.dataset.wasVisible = '1';
+    authScreen.style.display = 'none';
+  }
+  document.getElementById('adminModal').classList.add('show');
+  document.getElementById('adminKeyInput').value = '';
+  document.getElementById('adminKeyError').textContent = '';
+  setTimeout(() => document.getElementById('adminKeyInput').focus(), 300);
+}
+
+function closeAdminModal() {
+  document.getElementById('adminModal').classList.remove('show');
+  // Возвращаем authScreen если он был скрыт
+  const authScreen = document.getElementById('authScreen');
+  if (authScreen && authScreen.dataset.wasVisible === '1') {
+    authScreen.style.display = 'flex';
+    delete authScreen.dataset.wasVisible;
+  }
+}
+
+function adminLoginSubmit() {
+  const key = document.getElementById('adminKeyInput').value.trim();
+  if (key === ADMIN_SECRET_KEY) {
+    isAdmin = true;
+    localStorage.setItem('mk_is_admin', '1');
+    availableCourses = getAvailableCoursesForUser({});
+    renderCourseControls();
+    closeAdminModal();
+    showAdminTab();
+    showToast('👑 Режим админа активирован!');
+    setTimeout(() => switchTab('admin'), 400);
+  } else {
+    document.getElementById('adminKeyError').textContent = '❌ Неверный ключ, попробуй ещё раз';
+    document.getElementById('adminKeyInput').value = '';
+    document.getElementById('adminKeyInput').focus();
+  }
+}
+
+// ─── Admin logout ───
+function adminLogout() {
+  if (!confirm('Выйти из режима админа?')) return;
+  localStorage.removeItem('mk_is_admin');
+  isAdmin = false;
+  document.getElementById('adminTabBtn').style.display = 'none';
+  const lb = document.getElementById('adminLoginBtn');
+  if (lb) lb.style.display = '';
+  if (currentUser && db) {
+    db.ref(getUserSettingsPath(currentUser.uid)).once('value').then(settingsSnap => {
+      availableCourses = getAvailableCoursesForUser(settingsSnap.val() || {});
+      renderCourseControls();
+    });
+  }
+  switchTab('home');
+  showToast('👋 Вышли из режима админа');
+}
+
+// ═══════════════════════════════════════════════════
+//  CALENDAR
+// ═══════════════════════════════════════════════════
+function initCalendar() {
+  const now = new Date();
+  calYear  = now.getFullYear();
+  calMonth = now.getMonth();
+}
+
+function calChangeMonth(d) {
+  calMonth += d;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                  'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  document.getElementById('calMonthLabel').textContent = `${months[calMonth]} ${calYear}`;
+
+  const today = new Date();
+  const firstDay = new Date(calYear, calMonth, 1);
+  const lastDay  = new Date(calYear, calMonth + 1, 0);
+
+  // Monday-first: 0=Mon..6=Sun
+  let startDow = firstDay.getDay(); // 0=Sun
+  startDow = startDow === 0 ? 6 : startDow - 1;
+
+  const daysEl = document.getElementById('calDays');
+  let html = '';
+
+  // Empty cells before
+  for (let i = 0; i < startDow; i++) {
+    html += `<div class="cal-day empty"></div>`;
+  }
+
+  // Get event dates for this month
+  const eventDates = {};
+  Object.values(firebaseEvents).forEach(ev => {
+    const d = ev.date; // YYYY-MM-DD
+    if (!eventDates[d]) eventDates[d] = [];
+    eventDates[d].push(ev);
+  });
+
+  // Task deadlines from week structure
+  const taskDates = {};
+  for (let w = 1; w <= 35; w++) {
+    const wDate = new Date(getCourseStartDate());
+    wDate.setDate(wDate.getDate() + (w-1)*7 + 6); // end of week = Sunday
+    const key = wDate.toISOString().slice(0,10);
+    if (wDate.getFullYear() === calYear && wDate.getMonth() === calMonth) {
+      if (!taskDates[key]) taskDates[key] = [];
+      taskDates[key].push({ title: `Конец недели ${w}`, type: 'deadline' });
+    }
+  }
+
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = today.getDate()===d && today.getMonth()===calMonth && today.getFullYear()===calYear;
+    const evs = eventDates[dateStr] || [];
+    const tds = taskDates[dateStr] || [];
+    const hasEvent    = evs.some(e => normalizeEventType(e.type) !== 'deadline') || false;
+    const hasDeadline = evs.some(e=>e.type==='deadline') || tds.length > 0;
+
+    let cls = 'cal-day';
+    if (isToday) cls += ' today';
+    else if (hasDeadline) cls += ' has-deadline';
+    else if (hasEvent) cls += ' has-event';
+
+    const dots = (hasEvent ? `<div class="cal-dot event"></div>` : '') +
+                 (hasDeadline ? `<div class="cal-dot deadline"></div>` : '');
+
+    html += `<div class="${cls}" onclick="calDayClick('${dateStr}')">
+      <span class="cal-day-num">${d}</span>
+      ${dots}
+    </div>`;
+  }
+
+  daysEl.innerHTML = html;
+  renderCalendarEvents();
+}
+
+function calDayClick(dateStr) {
+  // Scroll to events section and highlight
+  const el = document.getElementById('calEventsList');
+  el.scrollIntoView({ behavior: 'smooth' });
+  renderCalendarEvents(dateStr);
+}
+
+function renderCalendarEvents(filterDate) {
+  const el = document.getElementById('calEventsList');
+  const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+
+  // Combine firebase events + week deadlines for this month
+  let allEvents = [];
+
+  Object.entries(firebaseEvents).forEach(([id, ev]) => {
+    const d = new Date(ev.date);
+    if (d.getFullYear()===calYear && d.getMonth()===calMonth) {
+      allEvents.push({ ...ev, type: normalizeEventType(ev.type), id, source: 'firebase' });
+    }
+  });
+
+  // Week end deadlines
+  for (let w = 1; w <= 35; w++) {
+    const wDate = new Date(getCourseStartDate());
+    wDate.setDate(wDate.getDate() + (w-1)*7 + 6);
+    if (wDate.getFullYear()===calYear && wDate.getMonth()===calMonth) {
+      const wTasks = getAllTasks().filter(t=>t.week===w);
+      const wDone  = wTasks.filter(t=>state.done[t.id]).length;
+      allEvents.push({
+        date: wDate.toISOString().slice(0,10),
+        title: `📚 Конец недели ${w}`,
+        desc: `${wDone}/${wTasks.length} задач выполнено`,
+        type: 'deadline',
+        source: 'system'
+      });
+    }
+  }
+
+  if (filterDate) allEvents = allEvents.filter(e => e.date === filterDate);
+  allEvents.sort((a,b) => a.date.localeCompare(b.date));
+
+  if (!allEvents.length) {
+    el.innerHTML = `<div class="empty-state"><div class="e-icon">📭</div>${filterDate ? 'На эту дату событий нет' : 'В этом месяце событий нет'}</div>`;
+    return;
+  }
+
+  el.innerHTML = allEvents.map(ev => {
+    const d = new Date(ev.date);
+    const day = d.getDate();
+    const mon = months[d.getMonth()];
+    const meta = getEventTypeMeta(ev.type);
+    const typeClass = normalizeEventType(ev.type);
+    return `<div class="event-card ${typeClass}">
+      <div class="event-date-badge">
+        <div class="event-date-day">${day}</div>
+        <div class="event-date-mon">${mon}</div>
+      </div>
+      <div class="event-body">
+        <div class="event-title">${ev.title}</div>
+        ${ev.desc ? `<div class="event-desc">${ev.desc}</div>` : ''}
+      </div>
+      <div class="event-type-badge ${typeClass}">${meta.icon} ${meta.label}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+//  ADMIN FUNCTIONS
+// ═══════════════════════════════════════════════════
+function adminAddEvent() {
+  if (!db) { showToast('⚠️ Firebase не подключён'); return; }
+  const type  = normalizeEventType(document.getElementById('adminEventType').value);
+  const date  = document.getElementById('adminEventDate').value;
+  const title = document.getElementById('adminEventTitle').value.trim();
+  const desc  = document.getElementById('adminEventDesc').value.trim();
+
+  if (!date || !title) { showToast('⚠️ Заполни дату и название'); return; }
+
+  const ref = db.ref(getCourseCollectionPath('calendar_events')).push();
+  const payload = { type, date, title, desc, createdAt: Date.now(), courseId: selectedCourseId };
+  const writes = [ref.set(payload)];
+  if (isLegacyCompatCourse()) {
+    const legacyRef = db.ref('calendar_events').child(ref.key);
+    writes.push(legacyRef.set(payload));
+  }
+
+  Promise.all(writes)
+    .then(() => {
+      document.getElementById('adminEventTitle').value = '';
+      document.getElementById('adminEventDesc').value = '';
+      showToast('✅ Запись добавлена в календарь!');
+    })
+    .catch(() => showToast('❌ Ошибка сохранения'));
+}
+
+function toggleAdminSection(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (!section) return;
+  section.classList.toggle('open');
+}
+
+function renderTaskEditorWeekOptions() {
+  const select = document.getElementById('taskFilterWeek');
+  if (!select) return;
+  const current = select.value || 'all';
+  select.innerHTML = '<option value="all">Все недели</option>' + Array.from({ length: 35 }, (_, i) => `<option value="${i+1}">Неделя ${i+1}</option>`).join('');
+  select.value = Array.from(select.options).some(opt => opt.value === current) ? current : 'all';
+}
+
+function taskEditorReset() {
+  taskEditorEditingId = null;
+  document.getElementById('taskEditorModeLabel').textContent = 'Новая задача';
+  document.getElementById('taskEditorWeek').value = '';
+  document.getElementById('taskEditorCat').value = 'sociology';
+  document.getElementById('taskEditorName').value = '';
+  document.getElementById('taskEditorXP').value = '20';
+}
+
+function taskEditorEdit(taskId) {
+  const task = (firebaseTasks || []).find(t => t.id === taskId);
+  if (!task) return;
+  taskEditorEditingId = taskId;
+  document.getElementById('taskEditorModeLabel').textContent = `Редактирование задачи: ${task.name}`;
+  document.getElementById('taskEditorWeek').value = task.week || '';
+  document.getElementById('taskEditorCat').value = task.cat || 'sociology';
+  document.getElementById('taskEditorName').value = task.name || '';
+  document.getElementById('taskEditorXP').value = String(task.xp || 20);
+  const section = document.getElementById('adminSectionTaskEditor');
+  if (section && !section.classList.contains('open')) section.classList.add('open');
+  window.scrollTo({ top: section.offsetTop - 20, behavior: 'smooth' });
+}
+
+function taskEditorSave() {
+  if (!db) { showToast('⚠️ Firebase не подключён'); return; }
+  const week = parseInt(document.getElementById('taskEditorWeek').value, 10);
+  const cat = document.getElementById('taskEditorCat').value;
+  const name = document.getElementById('taskEditorName').value.trim();
+  const xp = parseInt(document.getElementById('taskEditorXP').value, 10);
+
+  if (!week || week < 1 || week > 35 || !name) {
+    showToast('⚠️ Заполни неделю и название задачи');
+    return;
+  }
+
+  const refId = taskEditorEditingId || db.ref(getCourseCollectionPath('tasks')).push().key;
+
+  const payload = {
+    id: refId,
+    week,
+    cat,
+    name,
+    xp,
+    diff: xp <= 15 ? 'лёгкая' : xp <= 25 ? 'средняя' : xp <= 35 ? 'сложная' : 'очень сложная',
+    updatedAt: Date.now(),
+    courseId: selectedCourseId,
+  };
+  if (!taskEditorEditingId) payload.createdAt = Date.now();
+  const writes = [db.ref(`${getCourseCollectionPath('tasks')}/${refId}`).set(payload)];
+  if (isLegacyCompatCourse()) writes.push(db.ref(`tasks/${refId}`).set(payload));
+  Promise.all(writes)
+    .then(() => {
+      showToast(taskEditorEditingId ? '✅ Задача обновлена' : '✅ Задача добавлена');
+      taskEditorReset();
+    })
+    .catch(() => showToast('❌ Ошибка сохранения задачи'));
+}
+
+function taskEditorDelete(taskId) {
+  if (!db) return;
+  if (!confirm('Удалить эту задачу?')) return;
+  const writes = [db.ref(`${getCourseCollectionPath('tasks')}/${taskId}`).remove()];
+  if (isLegacyCompatCourse()) writes.push(db.ref(`tasks/${taskId}`).remove());
+  Promise.all(writes)
+    .then(() => {
+      if (taskEditorEditingId === taskId) taskEditorReset();
+      showToast('🗑️ Задача удалена');
+    })
+    .catch(() => showToast('❌ Ошибка удаления'));
+}
+
+
+function seedDefaultTasksToFirebase() { showToast('ℹ️ Встроенные задачи удалены из файла'); }
+
+function renderTaskEditorList() {
+  const listEl = document.getElementById('taskEditorList');
+  const countEl = document.getElementById('taskEditorCount');
+  if (!listEl || !countEl) return;
+
+  const weekFilter = document.getElementById('taskFilterWeek')?.value || 'all';
+  const catFilter = document.getElementById('taskFilterCat')?.value || 'all';
+  const search = (document.getElementById('taskFilterSearch')?.value || '').trim().toLowerCase();
+
+  const filtered = (firebaseTasks || [])
+    .filter(task => weekFilter === 'all' || String(task.week) === String(weekFilter))
+    .filter(task => catFilter === 'all' || task.cat === catFilter)
+    .filter(task => !search || (task.name || '').toLowerCase().includes(search))
+    .sort((a, b) => (a.week - b.week) || (a.name || '').localeCompare(b.name || '', 'ru'));
+
+  countEl.textContent = `Найдено: ${filtered.length} из ${(firebaseTasks || []).length}`;
+
+  if (!filtered.length) {
+    if (!(firebaseTasks || []).length) {
+      listEl.innerHTML = `
+        <div class="empty-state">
+          <div class="e-icon">📭</div>
+          В Firebase по пути <b>${getCourseCollectionPath('tasks')}</b> пока нет задач<br>
+          <span style="font-size:12px;color:var(--text3);font-weight:700">Поэтому раздел «Существующие задачи» пуст.</span>
+          <div style="margin-top:12px">
+            
+          </div>
+        </div>`;
+    } else {
+      listEl.innerHTML = '<div class="empty-state"><div class="e-icon">📭</div>По этим фильтрам задач нет</div>';
+    }
+    return;
+  }
+
+  listEl.innerHTML = filtered.map(task => {
+    const cat = CATEGORIES[task.cat] || { name: task.cat || '—', icon: '📚' };
+    return `
+      <div class="admin-task-item">
+        <div class="admin-task-top">
+          <div class="admin-task-name">${task.name}</div>
+        </div>
+        <div class="admin-task-meta">
+          <span class="admin-chip">Неделя ${task.week}</span>
+          <span class="admin-chip">${cat.icon} ${cat.name}</span>
+          <span class="admin-chip">${task.xp} XP</span>
+          <span class="admin-chip">${task.diff || '—'}</span>
+        </div>
+        <div class="admin-task-actions">
+          <button class="edit-btn" onclick="taskEditorEdit('${task.id}')">✏️ Редактировать</button>
+          <button class="delete-btn" onclick="taskEditorDelete('${task.id}')">🗑️ Удалить</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function adminLoadStudents() {
+  if (!db) { showToast('⚠️ Firebase не подключён'); return; }
+  readCourseAwareOnce(getStudentsPath(), isLegacyCompatCourse() ? getLegacyStudentsPath() : null).then(({ value }) => {
+    const students = value;
+    const el = document.getElementById('adminStudentsList');
+    if (!students) {
+      el.innerHTML = '<div class="empty-state"><div class="e-icon">👤</div>Ученики ещё не заходили</div>';
+      return;
+    }
+    const sorted = Object.values(students).sort((a,b) => b.done - a.done);
+    el.innerHTML = sorted.map((s,i) => {
+      const pct = s.total ? Math.round(s.done/s.total*100) : 0;
+      return `<div class="student-row">
+        <div class="student-name">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'👤'} ${s.name} <span style="font-size:10px;color:var(--text3)">${s.rank}</span></div>
+        <div class="student-stats">✅ ${s.done}/${s.total} задач · ⚡ ${s.xp} XP · 🔥 ${s.streak} дней</div>
+        <div class="student-bar"><div class="student-bar-fill" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+  });
+}
+
+function renderAdminEvents() {
+  const el = document.getElementById('adminEventsList');
+  const evs = Object.entries(firebaseEvents);
+  if (!evs.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3);font-weight:600">Нет добавленных событий</div>';
+    return;
+  }
+  el.innerHTML = evs.sort((a,b)=>a[1].date.localeCompare(b[1].date)).map(([id,ev]) => {
+    const meta = getEventTypeMeta(ev.type);
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:10px;background:white;border-radius:10px;border:1.5px solid var(--border)">
+      <span style="font-size:11px;font-weight:700;color:var(--text);flex:1">${ev.date} — ${ev.title} <span style="color:${meta.color}">${meta.icon} ${meta.label}</span></span>
+      <button class="del-btn" onclick="adminDeleteEvent('${id}')">🗑️</button>
+    </div>`;
+  }).join('');
+}
+
+function adminDeleteEvent(id) {
+  if (!db) return;
+  if (!confirm('Удалить это событие?')) return;
+  const writes = [db.ref(`${getCourseCollectionPath('calendar_events')}/${id}`).remove()];
+  if (isLegacyCompatCourse()) writes.push(db.ref(`calendar_events/${id}`).remove());
+  Promise.all(writes)
+    .then(() => showToast('🗑️ Удалено'))
+    .catch(() => showToast('❌ Ошибка'));
+}
+
+// ─── TOAST ───
+function showToast(msg) {
+  let el = document.getElementById('toastEl');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toastEl';
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+
+// Инициализируем Telegram WebApp если доступен
+if (TG) {
+  TG.ready();
+  TG.expand();
+}
+
+initCalendar();
+
+// Экран загрузки
+document.body.insertAdjacentHTML('afterbegin', `
+  <div id="loadingScreen" style="
+    position:fixed;inset:0;z-index:2000;
+    background:var(--bg);
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:16px;
+  ">
+    <div style="font-size:48px;animation:spin 1s linear infinite">⭐</div>
+    <div style="font-family:'Unbounded',sans-serif;font-size:14px;font-weight:700;color:var(--c1)">Загружаем прогресс...</div>
+  </div>
+  <style>@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}</style>
+`);
+
+function hideLoading() {
+  const el = document.getElementById('loadingScreen');
+  if (el) { el.style.opacity='0'; el.style.transition='opacity 0.3s'; setTimeout(()=>el.remove(),300); }
+}
+
+// Патчим renderAll чтобы убирать загрузку при первом рендере
+let _firstRender = true;
+const _renderAllOrig = renderAll;
+renderAll = function() {
+  _renderAllOrig();
+  if (_firstRender) { _firstRender = false; hideLoading(); }
+};
+
+// Auth-based init: Firebase handles rendering after login
+// loadState is called inside onUserLoggedIn after auth
+checkAdmin();
+initFirebase();
+// Fallback: if Firebase not configured, load from localStorage directly
+setTimeout(() => {
+  if (!auth) {
+    currentCourse = getDefaultCourse();
+    selectedCourseId = DEFAULT_COURSE_ID;
+    availableCourses = [getDefaultCourse()];
+    loadStateFromCache(DEFAULT_COURSE_ID);
+    state.currentWeek = state.currentWeek || getCurrentWeekNum();
+    renderCourseControls();
+    renderAll();
+    hideLoading();
+    document.getElementById('authScreen').style.display = 'none';
+  }
+}, 500);
+
+// ═══════════════════════════════════════════════════
+//  QUIZ ENGINE
+// ═══════════════════════════════════════════════════
+
+let quizMode = 'random';
+let quizThemeFilter = 'all';
+let quizOlympiadFilter = 'all';
+let quizQuestions = []; // loaded from Firebase
+let quizResults = {};   // userId results from Firebase
+let currentQuestion = null;
+let quizAnswered = false;
+let addQType = 'single';
+let quizSession = { correct: 0, total: 0 }; // session stats
+
+function normalizeOlympiadValue(value) {
+  const normalized = String(value || '').trim();
+  const allowed = ['vsosh', 'vp_obsh', 'lomonosov', 'vp_soc', 'izumrud'];
+  return allowed.includes(normalized) ? normalized : 'vp_obsh';
+}
+
+// ─── Load questions from Firebase ───
+function loadQuizQuestions() {
+  return;
+}
+
+// ─── Load user results from Firebase ───
+function loadQuizResults() {
+  return;
+}
+
+// ─── Save result ───
+function saveQuizResult(qid, correct) {
+  if (!db || !currentUser) return;
+  const prev = quizResults[qid] || { correct: 0, wrong: 0, attempts: 0 };
+  const updated = {
+    ...prev,
+    attempts: (prev.attempts || 0) + 1,
+    correct: (prev.correct || 0) + (correct ? 1 : 0),
+    wrong: (prev.wrong || 0) + (correct ? 0 : 1),
+    lastAt: Date.now(),
+    theme: currentQuestion?.theme || '',
+    subtopic: currentQuestion?.subtopic || '',
+  };
+  quizResults[qid] = updated;
+  const writes = [db.ref(`${getQuizResultsPath(currentUser.uid)}/${qid}`).set(updated)];
+  if (isLegacyCompatCourse()) writes.push(db.ref(`${getLegacyQuizResultsPath(currentUser.uid)}/${qid}`).set(updated));
+  Promise.all(writes).catch(err => console.warn('saveQuizResult error', err));
+  // Give XP for correct answer
+  if (correct) {
+    state.totalXP = (state.totalXP || 0);
+    const xpGain = 5;
+    showXPPopup(xpGain, document.getElementById('quizStartBtn'));
+    state.done = state.done || {};
+    saveState();
+  }
+}
+
+// ─── Stats ───
+function getQuizStats() {
+  const keys = Object.keys(quizResults);
+  const total = keys.reduce((s, k) => s + (quizResults[k].attempts || 0), 0);
+  const correct = keys.reduce((s, k) => s + (quizResults[k].correct || 0), 0);
+  return { total, correct, pct: total ? Math.round(correct/total*100) : 0 };
+}
+
+function renderQuizStats() {
+  const { total, correct, pct } = getQuizStats();
+  const el = id => document.getElementById(id);
+  if (el('quizStatTotal')) el('quizStatTotal').textContent = total;
+  if (el('quizStatCorrect')) el('quizStatCorrect').textContent = correct;
+  if (el('quizStatPct')) el('quizStatPct').textContent = pct + '%';
+}
+
+// ─── Mode & Filter ───
+function setQuizMode(mode) {
+  quizMode = mode;
+  document.querySelectorAll('.quiz-mode-card').forEach(c => c.classList.remove('active'));
+  document.getElementById(`mode${mode.charAt(0).toUpperCase()+mode.slice(1)}`).classList.add('active');
+  document.getElementById('quizThemeFilter').style.display = mode === 'theme' ? '' : 'none';
+  document.getElementById('quizOlympiadFilter').style.display = mode === 'olympiad' ? '' : 'none';
+  document.getElementById('quizWeakList').style.display = mode === 'weak' ? '' : 'none';
+  if (mode === 'weak') renderWeakThemes();
+  document.getElementById('quizStartBtn').textContent = 'Начать тест →';
+  document.getElementById('quizQuestionArea').innerHTML = `<div class="empty-state"><div class="e-icon">🧪</div><div>Нажми кнопку ниже чтобы начать!</div></div>`;
+  quizAnswered = false;
+}
+
+function setQuizFilter(type, val) {
+  if (type === 'theme') quizThemeFilter = val;
+  if (type === 'olympiad') quizOlympiadFilter = val;
+  document.querySelectorAll(`#quiz${type.charAt(0).toUpperCase()+type.slice(1)}Filter .quiz-filter-btn`).forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// ─── Get filtered questions ───
+function getFilteredQuestions() {
+  let pool = [...quizQuestions];
+  if (quizMode === 'theme' && quizThemeFilter !== 'all') {
+    pool = pool.filter(q => q.theme === quizThemeFilter);
+  }
+  if (quizMode === 'olympiad' && quizOlympiadFilter !== 'all') {
+    pool = pool.filter(q => q.olympiad === quizOlympiadFilter);
+  }
+  if (quizMode === 'weak') {
+    const weakThemes = getWeakThemes().map(w => w.subtopic);
+    pool = pool.filter(q => weakThemes.includes(q.subtopic));
+    if (!pool.length) pool = [...quizQuestions]; // fallback
+  }
+  return pool;
+}
+
+// ─── Weak themes analysis ───
+function getWeakThemes() {
+  const themeStats = {};
+  Object.values(quizResults).forEach(r => {
+    const key = r.subtopic || r.theme || 'Другое';
+    if (!themeStats[key]) themeStats[key] = { correct: 0, total: 0 };
+    themeStats[key].correct += r.correct || 0;
+    themeStats[key].total  += r.attempts || 0;
+  });
+  return Object.entries(themeStats)
+    .filter(([, s]) => s.total >= 2)
+    .map(([subtopic, s]) => ({ subtopic, pct: Math.round(s.correct/s.total*100) }))
+    .sort((a, b) => a.pct - b.pct);
+}
+
+function renderWeakThemes() {
+  const weak = getWeakThemes();
+  const el = document.getElementById('weakThemesList');
+  if (!weak.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3);font-weight:600;padding:8px">Ответь на несколько вопросов — AI проанализирует слабые места</div>';
+    return;
+  }
+  el.innerHTML = weak.slice(0, 6).map(w => `
+    <div class="weak-theme-item">
+      <div class="weak-theme-name">${w.subtopic}</div>
+      <div class="weak-theme-pct ${w.pct < 50 ? 'bad' : w.pct < 75 ? 'ok' : 'good'}">${w.pct}%</div>
+    </div>`).join('');
+}
+
+// ─── Pick next question ───
+function quizNext() {
+  const pool = getFilteredQuestions();
+  if (!pool.length) {
+    showToast('⚠️ Нет вопросов для этого режима');
+    return;
+  }
+  // Prioritize questions with fewer attempts or wrong answers
+  const scored = pool.map(q => {
+    const r = quizResults[q.id] || { attempts: 0, wrong: 0 };
+    const score = (r.wrong || 0) * 3 - (r.attempts || 0) + Math.random() * 5;
+    return { q, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  currentQuestion = scored[0].q;
+  quizAnswered = false;
+  renderQuestion(currentQuestion);
+  document.getElementById('quizStartBtn').textContent = 'Следующий вопрос →';
+}
+
+// ─── Render question ───
+function renderQuestion(q) {
+  const area = document.getElementById('quizQuestionArea');
+  const olympiadLabels = { vsosh:'ВсОШ', vp_obsh:'ВП (Общество)', lomonosov:'Ломоносов', vp_soc:'ВП (Социология)', izumrud:'Изумруд' };
+  const themeIcons = { sociology:'👥', politics:'🏛️', economics:'💰', law:'⚖️', philosophy:'🧠', culturology:'🎨' };
+
+  let optionsHTML = '';
+  if (q.type === 'single' || q.type === 'multi') {
+    const opts = (q.options || []);
+    optionsHTML = `<div class="quiz-options">${opts.map((opt, i) =>
+      `<button class="quiz-option" data-idx="${i}" onclick="quizSelect(this, '${q.type}')">${opt}</button>`
+    ).join('')}</div>`;
+  } else if (q.type === 'match') {
+    const pairs = q.pairs || [];
+    const shuffledDefs = [...pairs.map(p=>p.definition)].sort(()=>Math.random()-0.5);
+    optionsHTML = `<div class="quiz-match-pairs">${pairs.map((p, i) =>
+      `<div class="quiz-match-row">
+        <div class="quiz-match-term">${p.term}</div>
+        <select class="quiz-match-select" data-idx="${i}">
+          <option value="">— выбери —</option>
+          ${shuffledDefs.map(d => `<option value="${d}">${d}</option>`).join('')}
+        </select>
+      </div>`
+    ).join('')}</div>`;
+  }
+
+  area.innerHTML = `
+    <div class="quiz-question-card">
+      <div class="quiz-meta">
+        <span class="quiz-badge">${themeIcons[q.theme]||''} ${CATEGORIES[q.theme]?.name||q.theme}</span>
+        <span class="quiz-badge olympiad">${olympiadLabels[q.olympiad]||q.olympiad} ${q.year||''}</span>
+        ${q.subtopic ? `<span class="quiz-badge theme">${q.subtopic}</span>` : ''}
+      </div>
+      <div class="quiz-question-text">${q.question}</div>
+      ${optionsHTML}
+      <div class="quiz-feedback" id="quizFeedback">
+        <div class="quiz-feedback-title" id="quizFeedbackTitle"></div>
+        <div class="quiz-feedback-text" id="quizFeedbackText"></div>
+        <div class="quiz-ai-analysis loading" id="quizAiAnalysis">
+          <div class="quiz-ai-analysis-title">🤖 Совет от ИИ</div>
+          <div class="quiz-ai-analysis-body" id="quizAiAnalysisBody">AI анализирует ответ...</div>
+          <div class="quiz-ai-analysis-tip" id="quizAiAnalysisTip">Это короткая подсказка по ошибке или теме.</div>
+        </div>
+      </div>
+    </div>
+    ${(q.type === 'match' || q.type === 'multi')
+      ? `<button class="quiz-btn primary" onclick="${q.type === 'match' ? 'quizCheckMatch()' : 'quizCheckMulti()'}" style="width:100%;margin-bottom:10px">Проверить →</button>`
+      : ''}
+  `;
+}
+
+// ─── Select answer (single/multi) ───
+function quizSelect(btn, type) {
+  if (quizAnswered) return;
+  if (type === 'single') {
+    document.querySelectorAll('.quiz-option').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    quizCheckSingle();
+  } else {
+    btn.classList.toggle('selected');
+  }
+}
+
+function parseCorrectOptionIndexes(correctRaw, options = []) {
+  const normalizeToken = (token) => String(token || '').trim().toUpperCase();
+
+  const tokens = Array.isArray(correctRaw)
+    ? correctRaw.map(normalizeToken).filter(Boolean)
+    : String(correctRaw || '')
+        .split(/[;,\s]+/)
+        .map(normalizeToken)
+        .filter(Boolean);
+
+  const ruLetters = ['А','Б','В','Г','Д','Е','Ж','З','И','К','Л','М','Н','О','П'];
+  const enLetters = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'];
+
+  return tokens
+    .map(token => {
+      if (/^\d+$/.test(token)) {
+        const idx = parseInt(token, 10) - 1;
+        return idx >= 0 ? idx : null;
+      }
+
+      const ruIndex = ruLetters.indexOf(token);
+      if (ruIndex !== -1) return ruIndex;
+
+      const enIndex = enLetters.indexOf(token);
+      if (enIndex !== -1) return enIndex;
+
+      const byTextIndex = options.findIndex(opt => String(opt || '').trim().toUpperCase() === token);
+      if (byTextIndex !== -1) return byTextIndex;
+
+      return null;
+    })
+    .filter(v => v !== null)
+    .filter((v, i, arr) => arr.indexOf(v) === i)
+    .sort((a, b) => a - b);
+}
+
+function quizCheckSingle() {
+  if (quizAnswered || !currentQuestion) return;
+  const selected = document.querySelector('.quiz-option.selected');
+  if (!selected) return;
+
+  quizAnswered = true;
+
+  const idx = parseInt(selected.dataset.idx, 10);
+  const opts = currentQuestion.options || [];
+  const correctIndexes = parseCorrectOptionIndexes(currentQuestion.correct, opts);
+  const correctIndex = correctIndexes.length ? correctIndexes[0] : -1;
+  const isCorrect = idx === correctIndex;
+
+  document.querySelectorAll('.quiz-option').forEach((b, i) => {
+    if (i === correctIndex) b.classList.add('correct');
+    else if (b.classList.contains('selected')) b.classList.add('wrong');
+  });
+
+  showFeedback(isCorrect, currentQuestion.explanation);
+  saveQuizResult(currentQuestion.id, isCorrect);
+  if (isCorrect) getAiExplanation(currentQuestion, true);
+  else getAiExplanation(currentQuestion, false);
+}
+
+function quizCheckMulti() {
+  if (quizAnswered || !currentQuestion) return;
+
+  const selectedBtns = [...document.querySelectorAll('.quiz-option.selected')];
+  if (!selectedBtns.length) return;
+
+  quizAnswered = true;
+
+  const opts = currentQuestion.options || [];
+  const selectedIndexes = selectedBtns
+    .map(btn => parseInt(btn.dataset.idx, 10))
+    .filter(i => !Number.isNaN(i))
+    .sort((a, b) => a - b);
+
+  const correctIndexes = parseCorrectOptionIndexes(currentQuestion.correct, opts);
+
+  const isCorrect = selectedIndexes.length === correctIndexes.length &&
+    selectedIndexes.every((v, i) => v === correctIndexes[i]);
+
+  document.querySelectorAll('.quiz-option').forEach((b, i) => {
+    if (correctIndexes.includes(i)) {
+      b.classList.add('correct');
+    } else if (b.classList.contains('selected')) {
+      b.classList.add('wrong');
+    }
+  });
+
+  showFeedback(isCorrect, currentQuestion.explanation || 'Проверь выбранные варианты и сравни их с правильным набором ответов.');
+  saveQuizResult(currentQuestion.id, isCorrect);
+  getAiExplanation(currentQuestion, isCorrect);
+}
+
+function quizCheckMatch() {
+  if (quizAnswered || !currentQuestion) return;
+  quizAnswered = true;
+  const selects = document.querySelectorAll('.quiz-match-select');
+  const pairs = currentQuestion.pairs || [];
+  let correct = 0;
+  selects.forEach((sel, i) => {
+    if (sel.value === pairs[i]?.definition) {
+      sel.style.border = '2px solid var(--success)';
+      correct++;
+    } else {
+      sel.style.border = '2px solid #FF6B6B';
+    }
+  });
+  const isCorrect = correct === pairs.length;
+  showFeedback(isCorrect, currentQuestion.explanation || `Правильно: ${correct} из ${pairs.length}`);
+  saveQuizResult(currentQuestion.id, isCorrect);
+  getAiExplanation(currentQuestion, isCorrect);
+}
+
+// ─── Show feedback ───
+function showFeedback(isCorrect, explanation) {
+  const fb = document.getElementById('quizFeedback');
+  const title = document.getElementById('quizFeedbackTitle');
+  const text = document.getElementById('quizFeedbackText');
+  fb.className = `quiz-feedback show ${isCorrect ? 'correct-fb' : 'wrong-fb'}`;
+  title.textContent = isCorrect ? '✅ Правильно!' : '❌ Неверно';
+  text.textContent = explanation || '';
+}
+
+// ─── AI explanation via Anthropic API ───
+async function getAiExplanation(q, isCorrect) {
+  const aiEl = document.getElementById('quizAiAnalysis');
+  const aiBody = document.getElementById('quizAiAnalysisBody');
+  const aiTip = document.getElementById('quizAiAnalysisTip');
+  if (!aiEl || !aiBody || !aiTip) return;
+
+  aiEl.className = 'quiz-ai-analysis show loading';
+  aiBody.textContent = 'AI анализирует ответ и подбирает короткую подсказку...';
+  aiTip.textContent = isCorrect ? 'Подсказка поможет закрепить тему.' : 'Подсказка объяснит, что именно перепутано.';
+
+  const weak = getWeakThemes().slice(0, 3).map(w => w.subtopic).join(', ');
+
+  try {
+    const response = await fetch(SERVER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event_name: 'ai_analyze',
+        question: q.question,
+        correct: q.correct,
+        isCorrect,
+        theme: q.theme,
+        subtopic: q.subtopic || q.theme,
+        weakThemes: weak || 'пока нет данных'
+      })
+    });
+
+    const data = await response.json();
+    let text = data?.text || '';
+
+    if (!text && data?.body) {
+      try {
+        const inner = typeof data.body === 'string' ? JSON.parse(data.body) : data.body;
+        text = inner?.text || '';
+      } catch (_) {}
+    }
+
+    aiEl.className = 'quiz-ai-analysis show';
+    aiBody.textContent = text || (isCorrect
+      ? 'Ответ верный. Коротко повтори тему ещё раз, чтобы закрепить её.'
+      : 'Продолжай практиковаться — повторение укрепляет знания.');
+    aiTip.textContent = isCorrect
+      ? 'Совет от ИИ для закрепления правильного ответа.'
+      : 'Совет от ИИ показывает, что повторить перед следующим вопросом.';
+  } catch(e) {
+    aiEl.className = 'quiz-ai-analysis show soft';
+    aiBody.textContent = isCorrect
+      ? 'Ответ засчитан. Для закрепления ещё раз проговори ключевое различие по теме.'
+      : 'Не страшно. Сверь пары ещё раз и попробуй коротко объяснить их своими словами.';
+    aiTip.textContent = 'Если сеть недоступна, приложение показывает локальную подсказку.';
+  }
+}
+
+// ─── Add question type toggle ───
+function setAddQType(type) {
+  addQType = type;
+  document.querySelectorAll('.quiz-type-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`addTypeBtn_${type}`).classList.add('active');
+  document.getElementById('addQOptionsBlock').style.display = type !== 'match' ? '' : 'none';
+  document.getElementById('addQMatchBlock').style.display = type === 'match' ? '' : 'none';
+}
+
+// ─── Admin: add question ───
+function adminAddQuestion() {
+  if (!db) { showToast('⚠️ Firebase не подключён'); return; }
+  const theme    = document.getElementById('addQTheme').value;
+  const subtopic = document.getElementById('addQSubtopic').value.trim();
+  const olympiad = document.getElementById('addQOlympiad').value;
+  const year     = document.getElementById('addQYear').value;
+  const text     = document.getElementById('addQText').value.trim();
+  const explanation = document.getElementById('addQExplanation').value.trim();
+
+  if (!text) { showToast('⚠️ Введи текст вопроса'); return; }
+
+  const qData = {
+    id: 'q_' + Date.now(),
+    type: addQType,
+    theme, subtopic, olympiad,
+    year: year ? parseInt(year) : null,
+    question: text,
+    explanation,
+    createdAt: Date.now(),
+  };
+
+  if (addQType === 'single' || addQType === 'multi') {
+    const optsRaw = document.getElementById('addQOptions').value.trim();
+    const correct = document.getElementById('addQCorrect').value.trim();
+    if (!optsRaw || !correct) { showToast('⚠️ Заполни варианты и правильный ответ'); return; }
+    qData.options = optsRaw.split('\n').filter(l => l.trim());
+    qData.correct = (addQType === 'multi'
+      ? correct.split(/[;,\s]+/).map(x => x.trim()).filter(Boolean)
+      : correct);
+  } else if (addQType === 'match') {
+    const pairsRaw = document.getElementById('addQPairs').value.trim();
+    if (!pairsRaw) { showToast('⚠️ Введи пары сопоставления'); return; }
+    qData.pairs = pairsRaw.split('\n').filter(l => l.includes('|')).map(l => {
+      const [term, definition] = l.split('|');
+      return { term: term.trim(), definition: definition.trim() };
+    });
+    if (!qData.pairs.length) { showToast('⚠️ Формат: термин|определение'); return; }
+  }
+
+  const ref = db.ref(getCourseCollectionPath('questions')).push();
+  qData.id = ref.key;
+  qData.courseId = selectedCourseId;
+  const writes = [ref.set(qData)];
+  if (isLegacyCompatCourse()) writes.push(db.ref(`questions/${ref.key}`).set(qData));
+  Promise.all(writes)
+    .then(() => {
+      // Clear form
+      document.getElementById('addQText').value = '';
+      document.getElementById('addQSubtopic').value = '';
+      document.getElementById('addQOptions').value = '';
+      document.getElementById('addQCorrect').value = '';
+      document.getElementById('addQPairs').value = '';
+      document.getElementById('addQExplanation').value = '';
+      showToast(`✅ Вопрос добавлен! Всего: ${quizQuestions.length}`);
+    })
+    .catch(() => showToast('❌ Ошибка сохранения'));
+}
+
+// ─── Admin: quiz stats ───
+function adminLoadQuizStats() {
+  if (!db) return;
+  readCourseAwareOnce(`quiz_results/${selectedCourseId}`, isLegacyCompatCourse() ? 'quiz_results' : null).then(({ value }) => {
+    const all = value || {};
+    const students = Object.keys(all).length;
+    let totalAnswers = 0, totalCorrect = 0;
+    const themeErrors = {};
+    Object.values(all).forEach(userResults => {
+      Object.values(userResults).forEach(r => {
+        totalAnswers += r.attempts || 0;
+        totalCorrect += r.correct || 0;
+        if ((r.wrong || 0) > 0) {
+          const key = r.subtopic || r.theme || 'Другое';
+          themeErrors[key] = (themeErrors[key] || 0) + (r.wrong || 0);
+        }
+      });
+    });
+    const pct = totalAnswers ? Math.round(totalCorrect/totalAnswers*100) : 0;
+    const topErrors = Object.entries(themeErrors)
+      .sort((a,b) => b[1]-a[1]).slice(0,5);
+
+    const el = document.getElementById('adminQuizStats');
+    el.innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">
+        <div class="quiz-stat-card"><div class="quiz-stat-val">${students}</div><div class="quiz-stat-lbl">Учеников</div></div>
+        <div class="quiz-stat-card"><div class="quiz-stat-val">${totalAnswers}</div><div class="quiz-stat-lbl">Ответов</div></div>
+        <div class="quiz-stat-card"><div class="quiz-stat-val">${pct}%</div><div class="quiz-stat-lbl">Точность</div></div>
+      </div>
+      <div style="font-size:11px;font-weight:800;color:var(--text2);margin-bottom:6px">🔴 Проблемные темы у учеников:</div>
+      ${topErrors.map(([theme, errors]) => `
+        <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--c5);border-radius:8px;margin-bottom:4px;font-size:12px;font-weight:700">
+          <span>${theme}</span><span style="color:#FF6B6B">${errors} ошибок</span>
+        </div>`).join('') || '<div style="font-size:12px;color:var(--text3)">Данных пока нет</div>'}
+    `;
+  });
+}
+
+
+// ═══════════════════════════════════════════════════
+//  QUESTION EDITOR (ADMIN)
+// ═══════════════════════════════════════════════════
+
+let editingQId = null;
+
+function renderAdminQuestionList() {
+  const el = document.getElementById('adminQuestionList');
+  const countEl = document.getElementById('qListCount');
+  if (!el) return;
+
+  const search = (document.getElementById('qSearchInput')?.value || '').toLowerCase();
+  const filtered = quizQuestions.filter(q =>
+    !search ||
+    q.question?.toLowerCase().includes(search) ||
+    q.subtopic?.toLowerCase().includes(search) ||
+    CATEGORIES[q.theme]?.name?.toLowerCase().includes(search)
+  );
+
+  const olympiadLabels = { vsosh:'ВсОШ', vp_obsh:'ВП (Общество)', lomonosov:'Ломоносов', vp_soc:'ВП (Социология)', izumrud:'Изумруд' };
+  if (countEl) countEl.textContent = `Найдено: ${filtered.length} из ${quizQuestions.length}`;
+
+  if (!filtered.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3);font-weight:600;padding:8px">Вопросов нет — добавь первый выше ⬆️</div>';
+    return;
+  }
+
+  el.innerHTML = filtered.slice(0, 50).map(q => `
+    <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px">
+      <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+        <span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;background:var(--c4);color:var(--c1)">${CATEGORIES[q.theme]?.icon||''} ${CATEGORIES[q.theme]?.name||q.theme}</span>
+        <span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;background:#FFF3CD;color:var(--gold)">${olympiadLabels[q.olympiad]||q.olympiad} ${q.year||''}</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--c5);color:var(--text3)">${q.type==='single'?'Один':q.type==='multi'?'Несколько':'Сопоставление'}</span>
+      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;line-height:1.4">${q.question?.slice(0,120)}${q.question?.length>120?'...':''}</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="openEditQModal('${q.id}')" style="flex:1;padding:7px;background:var(--c4);border:none;border-radius:8px;font-family:Nunito,sans-serif;font-size:11px;font-weight:800;color:var(--c1);cursor:pointer">✏️ Редактировать</button>
+        <button onclick="adminDeleteQuestion('${q.id}')" style="padding:7px 12px;background:#FFF0F0;border:none;border-radius:8px;font-family:Nunito,sans-serif;font-size:11px;font-weight:800;color:#FF6B6B;cursor:pointer">🗑️</button>
+      </div>
+    </div>
+  `).join('') + (filtered.length > 50 ? `<div style="text-align:center;font-size:12px;color:var(--text3);font-weight:700;padding:8px">Показаны первые 50. Используй поиск для фильтрации.</div>` : '');
+}
+
+function openEditQModal(qid) {
+  const q = quizQuestions.find(q => q.id === qid);
+  if (!q) return;
+  editingQId = qid;
+
+  document.getElementById('editQTheme').value = q.theme || 'sociology';
+  document.getElementById('editQSubtopic').value = q.subtopic || '';
+  document.getElementById('editQOlympiad').value = normalizeOlympiadValue(q.olympiad);
+  document.getElementById('editQYear').value = q.year || '';
+  document.getElementById('editQText').value = q.question || '';
+  document.getElementById('editQExplanation').value = q.explanation || '';
+
+  const isMatch = q.type === 'match';
+  document.getElementById('editQOptionsBlock').style.display = isMatch ? 'none' : '';
+  document.getElementById('editQMatchBlock').style.display = isMatch ? '' : 'none';
+
+  if (!isMatch) {
+    document.getElementById('editQOptions').value = (q.options || []).join('\n');
+    document.getElementById('editQCorrect').value = Array.isArray(q.correct) ? q.correct.join(', ') : (q.correct || '');
+  } else {
+    document.getElementById('editQPairs').value = (q.pairs || []).map(p => `${p.term}|${p.definition}`).join('\n');
+  }
+
+  document.getElementById('editQModal').style.display = 'block';
+  document.getElementById('editQModal').scrollTop = 0;
+}
+
+function closeEditQModal() {
+  document.getElementById('editQModal').style.display = 'none';
+  editingQId = null;
+}
+
+function adminSaveQuestion() {
+  if (!editingQId || !db) return;
+  const q = quizQuestions.find(q => q.id === editingQId);
+  if (!q) return;
+
+  const updated = {
+    ...q,
+    theme:      document.getElementById('editQTheme').value,
+    subtopic:   document.getElementById('editQSubtopic').value.trim(),
+    olympiad:   normalizeOlympiadValue(document.getElementById('editQOlympiad').value),
+    year:       parseInt(document.getElementById('editQYear').value) || null,
+    question:   document.getElementById('editQText').value.trim(),
+    explanation:document.getElementById('editQExplanation').value.trim(),
+    updatedAt:  Date.now(),
+  };
+
+  if (q.type !== 'match') {
+    updated.options = document.getElementById('editQOptions').value.trim().split('\n').filter(l=>l.trim());
+    updated.correct = (q.type === 'multi'
+      ? document.getElementById('editQCorrect').value.trim().split(/[;,\s]+/).map(x => x.trim()).filter(Boolean)
+      : document.getElementById('editQCorrect').value.trim());
+  } else {
+    updated.pairs = document.getElementById('editQPairs').value.trim()
+      .split('\n').filter(l=>l.includes('|'))
+      .map(l => { const [term, definition] = l.split('|'); return { term: term.trim(), definition: definition.trim() }; });
+  }
+
+  updated.courseId = selectedCourseId;
+  const writes = [db.ref(`${getCourseCollectionPath('questions')}/${editingQId}`).set(updated)];
+  if (isLegacyCompatCourse()) writes.push(db.ref(`questions/${editingQId}`).set(updated));
+  Promise.all(writes)
+    .then(() => {
+      closeEditQModal();
+      showToast('✅ Вопрос сохранён!');
+    })
+    .catch(() => showToast('❌ Ошибка сохранения'));
+}
+
+function adminDeleteQuestion(qid) {
+  if (!confirm('Удалить этот вопрос?')) return;
+  if (!db) return;
+  const writes = [db.ref(`${getCourseCollectionPath('questions')}/${qid}`).remove()];
+  if (isLegacyCompatCourse()) writes.push(db.ref(`questions/${qid}`).remove());
+  Promise.all(writes)
+    .then(() => showToast('🗑️ Вопрос удалён'))
+    .catch(() => showToast('❌ Ошибка'));
+}
+</script>
+</body>
+</html>
