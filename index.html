@@ -1932,6 +1932,18 @@ body {
       <div style="height:1px;background:var(--border);margin:14px 0"></div>
       <div style="font-family:'Unbounded',sans-serif;font-size:12px;color:var(--text);font-weight:700;margin-bottom:10px">🧪 Олимпиады / категории тестов</div>
 
+      <div id="adminTestCategoryCourseContext" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:10px 12px;margin-bottom:10px;background:linear-gradient(135deg,#F7FBFF,#EEF8FF);border:1.5px solid #D8ECFA;border-radius:14px">
+        <div style="min-width:0">
+          <div style="font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Контекст редактирования</div>
+          <div id="adminTestCategoryCourseContextTitle" style="font-size:13px;font-weight:900;color:var(--text)">Курс: —</div>
+          <div id="adminTestCategoryCourseContextMeta" style="font-size:11px;font-weight:700;color:var(--text2);margin-top:2px">Категории будут сохранены в выбранный курс</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+          <div id="adminTestCategoryCourseContextChip" class="admin-chip">courseId: —</div>
+          <button id="adminTestCategorySwitchCourseBtn" type="button" class="admin-btn" onclick="openCourseSwitcher()" style="padding:8px 12px;background:var(--c4);color:var(--c1);white-space:nowrap">Сменить курс</button>
+        </div>
+      </div>
+
       <div style="font-size:13px;color:var(--text2);font-weight:800;margin-bottom:10px" id="adminTestCategoryModeLabel">Новая категория тестов</div>
 
       <div class="admin-inline-grid">
@@ -4171,12 +4183,13 @@ function renderAdminCourseManager() {
 function adminTestCategoryReset() {
   adminTestCategoryEditingId = null;
   const idInput = document.getElementById('adminTestCategoryId');
+  const course = getCourseById(selectedCourseId);
   if (idInput) {
     idInput.value = '';
     idInput.readOnly = false;
     idInput.style.opacity = '1';
   }
-  document.getElementById('adminTestCategoryModeLabel').textContent = 'Новая категория тестов';
+  document.getElementById('adminTestCategoryModeLabel').textContent = `Новая категория для курса: ${course.shortName || course.name}`;
   document.getElementById('adminTestCategoryName').value = '';
   document.getElementById('adminTestCategoryShortName').value = '';
   document.getElementById('adminTestCategorySortOrder').value = '';
@@ -4186,12 +4199,13 @@ function adminTestCategoryReset() {
 function adminEditTestCategory(categoryId) {
   const category = getTestCategoryMapForCourse(selectedCourseId)[categoryId];
   if (!category) return;
+  const course = getCourseById(selectedCourseId);
   adminTestCategoryEditingId = category.id;
   const idInput = document.getElementById('adminTestCategoryId');
   idInput.value = category.id;
   idInput.readOnly = true;
   idInput.style.opacity = '0.7';
-  document.getElementById('adminTestCategoryModeLabel').textContent = `Редактирование категории: ${category.name}`;
+  document.getElementById('adminTestCategoryModeLabel').textContent = `Редактирование категории: ${category.name} · курс ${course.shortName || course.name}`;
   document.getElementById('adminTestCategoryName').value = category.name || '';
   document.getElementById('adminTestCategoryShortName').value = category.shortName || '';
   document.getElementById('adminTestCategorySortOrder').value = Number.isFinite(category.sortOrder) ? String(category.sortOrder) : '';
@@ -4203,7 +4217,23 @@ function adminEditTestCategory(categoryId) {
 
 function renderAdminTestCategoryManager() {
   const listEl = document.getElementById('adminTestCategoryList');
+  const contextTitle = document.getElementById('adminTestCategoryCourseContextTitle');
+  const contextMeta = document.getElementById('adminTestCategoryCourseContextMeta');
+  const contextChip = document.getElementById('adminTestCategoryCourseContextChip');
+  const switchCourseBtn = document.getElementById('adminTestCategorySwitchCourseBtn');
+  const modeLabel = document.getElementById('adminTestCategoryModeLabel');
   if (!listEl) return;
+  const course = getCourseById(selectedCourseId);
+  if (contextTitle) contextTitle.textContent = `Курс: ${course.name}`;
+  if (contextMeta) contextMeta.textContent = `Изменения затронут только категории тестов курса «${course.shortName || course.name}»`;
+  if (contextChip) contextChip.textContent = `courseId: ${selectedCourseId}`;
+  if (switchCourseBtn) switchCourseBtn.style.display = currentUser && availableCourses.length > 1 ? '' : 'none';
+  if (adminTestCategoryEditingId && !getTestCategoryMapForCourse(selectedCourseId)[adminTestCategoryEditingId]) {
+    adminTestCategoryEditingId = null;
+  }
+  if (modeLabel && !adminTestCategoryEditingId) {
+    modeLabel.textContent = `Новая категория для курса: ${course.shortName || course.name}`;
+  }
   const categories = getTestCategoriesForCourse(selectedCourseId);
   if (!categories.length) {
     listEl.innerHTML = '<div class="empty-state"><div class="e-icon">🧪</div>Категорий тестов пока нет</div>';
