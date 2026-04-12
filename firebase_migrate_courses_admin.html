@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>МК Трекер — Миграция курсов</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --c1: #64AFDC;
+  --c2: #AFDCFA;
+  --c3: #DBF1FF;
+  --bg: #F4FAFF;
+  --card: #FFFFFF;
+  --text: #1A2940;
+  --text2: #4A6585;
+  --text3: #7C9AB8;
+  --border: #D0E8F7;
+  --success: #34C77B;
+  --danger: #E66767;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 24px 14px;
+  background: linear-gradient(180deg, #eff8ff 0%, #f9fcff 100%);
+  font-family: 'Nunito', sans-serif;
+  color: var(--text);
+}
+.wrap {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.hero {
+  margin-bottom: 14px;
+  padding: 20px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--c1) 0%, var(--c2) 100%);
+  color: white;
+  box-shadow: 0 16px 40px rgba(100, 175, 220, 0.18);
+}
+.hero-title {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 20px;
+  line-height: 1.25;
+  margin-bottom: 8px;
+}
+.hero-subtitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
+}
+.card {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 10px 28px rgba(100, 175, 220, 0.1);
+  margin-bottom: 12px;
+}
+.section-title {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.grid {
+  display: grid;
+  gap: 12px;
+}
+.grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text2);
+}
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 12px 13px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: white;
+  font: inherit;
+  color: var(--text);
+}
+.field textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+.checks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 2px;
+}
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text2);
+}
+.check input {
+  margin-top: 2px;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.btn {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.btn.primary {
+  background: var(--c1);
+  color: white;
+}
+.btn.secondary {
+  background: var(--c3);
+  color: var(--text);
+}
+.btn.danger {
+  background: #fff1f1;
+  color: var(--danger);
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.status {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--c3);
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 800;
+}
+.status.ok {
+  background: #eefcf4;
+  color: #1f7f4f;
+}
+.status.err {
+  background: #fff1f1;
+  color: #b94a4a;
+}
+.mono {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  background: #0f1f33;
+  color: #d7e7f8;
+  border-radius: 14px;
+  padding: 14px;
+  min-height: 220px;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--c3);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 800;
+}
+@media (max-width: 640px) {
+  .grid.two {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="hero-title">Миграция Firebase в multi-course формат</div>
+    <div class="hero-subtitle">Отдельная админ-страница для мягкого переноса legacy-данных в course-aware структуру.</div>
+  </div>
+
+  <div class="card" id="authCard">
+    <div class="section-title">Вход администратора</div>
+    <div class="grid two">
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" placeholder="admin@example.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="password">Пароль</label>
+        <input id="password" type="password" placeholder="Пароль" autocomplete="current-password">
+      </div>
+    </div>
+    <div class="actions" style="margin-top:12px">
+      <button class="btn primary" id="loginBtn">Войти</button>
+      <button class="btn secondary" id="logoutBtn" style="display:none">Выйти</button>
+    </div>
+    <div id="authStatus" class="status" style="margin-top:12px">Не авторизован</div>
+  </div>
+
+  <div class="card" id="migrationCard" style="display:none">
+    <div class="section-title">Параметры миграции</div>
+    <div style="margin-bottom:12px" class="pill" id="userInfoPill">Пользователь: —</div>
+
+    <div class="grid two">
+      <div class="field">
+        <label for="courseId">courseId</label>
+        <input id="courseId" type="text" value="course_default">
+      </div>
+      <div class="field">
+        <label for="courseName">Название курса</label>
+        <input id="courseName" type="text" value="Основной курс">
+      </div>
+      <div class="field">
+        <label for="courseShortName">Короткое имя</label>
+        <input id="courseShortName" type="text" value="Основной курс">
+      </div>
+      <div class="field">
+        <label for="legacyCompat">Legacy-совместимость</label>
+        <input id="legacyCompatText" type="text" value="true" disabled>
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:12px">
+      <label for="courseDescription">Описание курса</label>
+      <textarea id="courseDescription">Текущий основной поток</textarea>
+    </div>
+
+    <div class="checks">
+      <label class="check"><input id="setUserCoursePrefs" type="checkbox" checked> Проставить пользователям `selectedCourseId` и `currentCourseId`</label>
+      <label class="check"><input id="markUserCourseAccess" type="checkbox"> Проставить пользователям `users/{uid}/courses/{courseId} = true`</label>
+    </div>
+
+    <div class="actions" style="margin-top:14px">
+      <button class="btn secondary" id="dryRunBtn">Проверить dry-run</button>
+      <button class="btn primary" id="runBtn">Запустить миграцию</button>
+      <button class="btn danger" id="clearLogBtn">Очистить лог</button>
+    </div>
+    <div id="migrationStatus" class="status" style="margin-top:12px">Готово к проверке</div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Лог</div>
+    <div id="log" class="mono"></div>
+  </div>
+</div>
+
+<script>
+const ENV = 'dev'; // 'dev' или 'prod'
+
+const FIREBASE_CONFIGS = {
+  dev: {
+    apiKey: "AIzaSyBIS14IVwTVsSfO64tuwRpUjVi_sXqEZK0",
+    authDomain: "dev1-668a8.firebaseapp.com",
+    databaseURL: "https://dev1-668a8-default-rtdb.firebaseio.com",
+    projectId: "dev1-668a8",
+    storageBucket: "dev1-668a8.firebasestorage.app",
+    messagingSenderId: "709334043230",
+    appId: "1:709334043230:web:5deda064c7de0cf07b42cf",
+    measurementId: "G-1GMXBF9J3D"
+  },
+  prod: {
+    apiKey: "AIzaSyDkalispfWTVINy6U1dGJ6hGPuelq9mg1k",
+    authDomain: "meinkurs-tracker.firebaseapp.com",
+    databaseURL: "https://meinkurs-tracker-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "meinkurs-tracker",
+    storageBucket: "meinkurs-tracker.firebasestorage.app",
+    messagingSenderId: "859829593991",
+    appId: "1:859829593991:web:2b3b5f4ff4019ec7cd5522"
+  }
+};
+
+const FIREBASE_CONFIG = FIREBASE_CONFIGS[ENV];
+
+if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db = firebase.database();
+
+const el = (id) => document.getElementById(id);
+const logEl = el('log');
+
+function writeLog(...parts) {
+  const line = parts.map(part => {
+    if (typeof part === 'string') return part;
+    try { return JSON.stringify(part, null, 2); } catch (_) { return String(part); }
+  }).join(' ');
+  logEl.textContent += (logEl.textContent ? '\n' : '') + line;
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setStatus(id, text, type = '') {
+  const node = el(id);
+  node.textContent = text;
+  node.className = `status ${type}`.trim();
+}
+
+function setBusy(isBusy) {
+  el('loginBtn').disabled = isBusy;
+  el('logoutBtn').disabled = isBusy;
+  el('dryRunBtn').disabled = isBusy;
+  el('runBtn').disabled = isBusy;
+}
+
+async function runMkCourseMigration(options = {}) {
+  const config = {
+    courseId: el('courseId').value.trim() || 'course_default',
+    courseName: el('courseName').value.trim() || 'Основной курс',
+    courseShortName: el('courseShortName').value.trim() || 'Основной курс',
+    courseDescription: el('courseDescription').value.trim() || 'Текущий основной поток',
+    legacyCompat: true,
+    setUserCoursePrefs: el('setUserCoursePrefs').checked,
+    markUserCourseAccess: el('markUserCourseAccess').checked,
+    dryRun: true,
+    ...options,
+  };
+
+  const read = async (path) => {
+    const snap = await db.ref(path).once('value');
+    return snap.val();
+  };
+
+  const pathExists = async (path) => {
+    const snap = await db.ref(path).once('value');
+    return snap.exists();
+  };
+
+  const isObject = (value) => value && typeof value === 'object' && !Array.isArray(value);
+
+  const updates = {};
+  const stats = {
+    scheduledWrites: 0,
+    copied: [],
+    skippedExisting: [],
+    touchedUsers: 0,
+  };
+
+  const scheduleSetIfMissing = async (targetPath, value, label) => {
+    const exists = await pathExists(targetPath);
+    if (exists) {
+      stats.skippedExisting.push(label || targetPath);
+      return;
+    }
+    updates[targetPath] = value;
+    stats.scheduledWrites += 1;
+    if (label) stats.copied.push(label);
+  };
+
+  const copyCollectionByKey = async (sourcePath, targetRoot, mutateValue) => {
+    const source = await read(sourcePath);
+    if (!isObject(source)) {
+      writeLog(`Источник пуст: ${sourcePath}`);
+      return;
+    }
+    for (const [key, rawValue] of Object.entries(source)) {
+      const nextValue = mutateValue ? mutateValue(rawValue, key) : rawValue;
+      await scheduleSetIfMissing(`${targetRoot}/${key}`, nextValue, `${sourcePath}/${key} -> ${targetRoot}/${key}`);
+    }
+  };
+
+  const copyUserScopedBranch = async (sourceRoot, targetRoot, mutateValue) => {
+    const source = await read(sourceRoot);
+    if (!isObject(source)) {
+      writeLog(`Источник пуст: ${sourceRoot}`);
+      return;
+    }
+    for (const [uid, rawValue] of Object.entries(source)) {
+      const nextValue = mutateValue ? mutateValue(rawValue, uid) : rawValue;
+      await scheduleSetIfMissing(`${targetRoot}/${uid}`, nextValue, `${sourceRoot}/${uid} -> ${targetRoot}/${uid}`);
+    }
+  };
+
+  await scheduleSetIfMissing(`courses/${config.courseId}`, {
+    id: config.courseId,
+    name: config.courseName,
+    shortName: config.courseShortName,
+    description: config.courseDescription,
+    active: true,
+    sortOrder: 0,
+    legacyCompat: !!config.legacyCompat,
+    migratedAt: Date.now(),
+  }, `courses/${config.courseId}`);
+
+  await copyCollectionByKey('tasks', `course_data/${config.courseId}/tasks`, (value, key) => ({
+    ...value,
+    id: value?.id || key,
+    courseId: config.courseId,
+    migratedAt: Date.now(),
+  }));
+
+  await copyCollectionByKey('calendar_events', `course_data/${config.courseId}/calendar_events`, (value) => ({
+    ...value,
+    courseId: config.courseId,
+    migratedAt: Date.now(),
+  }));
+
+  await copyCollectionByKey('questions', `course_data/${config.courseId}/questions`, (value, key) => ({
+    ...value,
+    id: value?.id || key,
+    courseId: config.courseId,
+    migratedAt: Date.now(),
+  }));
+
+  await copyUserScopedBranch('progress', `progress/${config.courseId}`, (value) => ({
+    ...value,
+    courseId: config.courseId,
+    migratedAt: Date.now(),
+  }));
+
+  await copyUserScopedBranch('quiz_results', `quiz_results/${config.courseId}`, (value) => value);
+
+  await copyUserScopedBranch('students', `students/${config.courseId}`, (value) => ({
+    ...value,
+    courseId: config.courseId,
+    courseName: config.courseName,
+    migratedAt: Date.now(),
+  }));
+
+  if (config.setUserCoursePrefs || config.markUserCourseAccess) {
+    const allUsers = new Set();
+    const progressUsers = await read('progress');
+    const studentUsers = await read('students');
+    const resultUsers = await read('quiz_results');
+
+    if (isObject(progressUsers)) Object.keys(progressUsers).forEach(uid => allUsers.add(uid));
+    if (isObject(studentUsers)) Object.keys(studentUsers).forEach(uid => allUsers.add(uid));
+    if (isObject(resultUsers)) Object.keys(resultUsers).forEach(uid => allUsers.add(uid));
+
+    for (const uid of allUsers) {
+      if (config.setUserCoursePrefs) {
+        const selectedPath = `users/${uid}/selectedCourseId`;
+        const currentPath = `users/${uid}/currentCourseId`;
+        if (!(await pathExists(selectedPath))) {
+          updates[selectedPath] = config.courseId;
+          stats.scheduledWrites += 1;
+        }
+        if (!(await pathExists(currentPath))) {
+          updates[currentPath] = config.courseId;
+          stats.scheduledWrites += 1;
+        }
+      }
+
+      if (config.markUserCourseAccess) {
+        const accessPath = `users/${uid}/courses/${config.courseId}`;
+        if (!(await pathExists(accessPath))) {
+          updates[accessPath] = true;
+          stats.scheduledWrites += 1;
+        }
+      }
+
+      stats.touchedUsers += 1;
+    }
+  }
+
+  const summary = {
+    dryRun: config.dryRun,
+    courseId: config.courseId,
+    scheduledWrites: stats.scheduledWrites,
+    copiedPreview: stats.copied.slice(0, 30),
+    skippedExistingPreview: stats.skippedExisting.slice(0, 30),
+    touchedUsers: stats.touchedUsers,
+  };
+
+  writeLog('Итог миграции:', summary);
+
+  if (config.dryRun) {
+    writeLog('Dry-run включён. Ничего не записано.');
+    return summary;
+  }
+
+  if (!stats.scheduledWrites) {
+    writeLog('Новых записей не требуется.');
+    return summary;
+  }
+
+  await db.ref().update(updates);
+  writeLog(`Готово. Записано ${stats.scheduledWrites} изменений.`);
+  return summary;
+}
+
+async function handleLogin() {
+  const email = el('email').value.trim();
+  const password = el('password').value;
+  if (!email || !password) {
+    setStatus('authStatus', 'Заполни email и пароль', 'err');
+    return;
+  }
+  setBusy(true);
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+  } catch (error) {
+    setStatus('authStatus', `Ошибка входа: ${error.message}`, 'err');
+    writeLog('Ошибка входа:', error.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function handleLogout() {
+  setBusy(true);
+  try {
+    await auth.signOut();
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function handleMigration(dryRun) {
+  setBusy(true);
+  setStatus('migrationStatus', dryRun ? 'Идёт dry-run...' : 'Идёт миграция...');
+  writeLog('----------------------------------------');
+  writeLog(dryRun ? 'Запуск dry-run' : 'Запуск реальной миграции');
+  try {
+    const summary = await runMkCourseMigration({ dryRun });
+    setStatus(
+      'migrationStatus',
+      dryRun
+        ? `Dry-run завершён. Планируемых записей: ${summary.scheduledWrites}`
+        : `Миграция завершена. Записей: ${summary.scheduledWrites}`,
+      'ok'
+    );
+  } catch (error) {
+    setStatus('migrationStatus', `Ошибка: ${error.message}`, 'err');
+    writeLog('Ошибка миграции:', error.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+auth.onAuthStateChanged((user) => {
+  const loggedIn = !!user;
+  el('migrationCard').style.display = loggedIn ? '' : 'none';
+  el('logoutBtn').style.display = loggedIn ? '' : 'none';
+  el('loginBtn').style.display = loggedIn ? 'none' : '';
+  if (loggedIn) {
+    el('userInfoPill').textContent = `Пользователь: ${user.displayName || user.email}`;
+    setStatus('authStatus', 'Авторизован. Можно запускать dry-run или миграцию.', 'ok');
+    writeLog(`Вход выполнен: ${user.email}`);
+  } else {
+    el('userInfoPill').textContent = 'Пользователь: —';
+    setStatus('authStatus', 'Не авторизован', '');
+  }
+});
+
+el('loginBtn').addEventListener('click', handleLogin);
+el('logoutBtn').addEventListener('click', handleLogout);
+el('dryRunBtn').addEventListener('click', () => handleMigration(true));
+el('runBtn').addEventListener('click', async () => {
+  const ok = window.confirm('Запустить реальную миграцию? Старые данные не удаляются, но новые записи будут созданы.');
+  if (!ok) return;
+  await handleMigration(false);
+});
+el('clearLogBtn').addEventListener('click', () => { logEl.textContent = ''; });
+
+writeLog('Страница готова. Войди под админским аккаунтом Firebase.');
+</script>
+</body>
+</html>
