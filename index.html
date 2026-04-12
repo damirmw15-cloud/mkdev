@@ -205,6 +205,47 @@ body {
   font-size: 12px;
   font-weight: 700;
   color: var(--text2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.admin-course-note-btn {
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+  font-family: 'Nunito', sans-serif;
+}
+.admin-course-note-btn:active {
+  transform: scale(0.995);
+}
+.admin-course-note-main {
+  min-width: 0;
+}
+.admin-course-note-label {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 2px;
+}
+.admin-course-note-value {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--text);
+}
+.admin-course-note-meta {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  margin-top: 2px;
+}
+.admin-course-note-arrow {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--c1);
+  flex-shrink: 0;
 }
 .admin-course-toolbar {
   display: flex;
@@ -213,6 +254,74 @@ body {
 }
 .admin-course-toolbar button {
   margin-top: 0;
+}
+.admin-course-editor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2500;
+  background: rgba(26, 41, 64, 0.42);
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+}
+.admin-course-editor-overlay.show {
+  display: flex;
+}
+.admin-course-editor-modal {
+  width: min(760px, 100%);
+  max-height: min(88vh, 920px);
+  background: white;
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(26,41,64,0.22);
+  display: flex;
+  flex-direction: column;
+}
+.admin-course-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #F7FBFF, #EEF8FF);
+}
+.admin-course-editor-title {
+  font-family: 'Unbounded', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+.admin-course-editor-subtitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  margin-top: 3px;
+}
+.admin-course-editor-close {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: white;
+  color: var(--text2);
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px var(--shadow);
+}
+.admin-course-editor-body {
+  padding: 16px;
+  overflow-y: auto;
+}
+.admin-course-editor-panel {
+  background: linear-gradient(135deg, #FFF9F0, white);
+  border-radius: 18px;
+  padding: 16px;
+  border: 1.5px solid #FFE4A0;
+  box-shadow: 0 2px 12px rgba(245,166,35,0.1);
 }
 .admin-course-list {
   display: flex;
@@ -1853,14 +1962,26 @@ body {
 
 <!-- ══════════════════════════════════ ADMIN TAB ══════════════════════════════════ -->
 <div class="tab-content" id="tab-admin">
-  <div class="admin-course-note" id="adminCourseNote">Курс: —</div>
+  <button class="admin-course-note admin-course-note-btn" id="adminCourseNote" onclick="openCourseSwitcher()" type="button" aria-label="Выбрать курс">
+    <div class="admin-course-note-main">
+      <div class="admin-course-note-label">Текущий курс</div>
+      <div class="admin-course-note-value" id="adminCourseNoteValue">Курс: —</div>
+      <div class="admin-course-note-meta">Нажми, чтобы переключить курс или открыть редактор курсов</div>
+    </div>
+    <div class="admin-course-note-arrow">▾</div>
+  </button>
 
-  <div class="admin-section" id="adminSectionCourses">
-    <button class="admin-section-header" onclick="toggleAdminSection('adminSectionCourses')">
-      <div class="admin-section-title">🎓 Курсы и переключение</div>
-      <span class="admin-section-arrow">▼</span>
-    </button>
-    <div class="admin-section-body">
+  <div class="admin-course-editor-overlay" id="adminCourseEditorModal" onclick="handleAdminCourseEditorOverlay(event)">
+    <div class="admin-course-editor-modal">
+      <div class="admin-course-editor-head">
+        <div>
+          <div class="admin-course-editor-title">⚙️ Редактор курсов</div>
+          <div class="admin-course-editor-subtitle">Создание курсов, настройка параметров и управление категориями тестов</div>
+        </div>
+        <button class="admin-course-editor-close" type="button" onclick="closeAdminCourseEditor()" aria-label="Закрыть">×</button>
+      </div>
+      <div class="admin-course-editor-body">
+        <div class="admin-course-editor-panel" id="adminSectionCourses">
       <div style="font-size:13px;color:var(--text2);font-weight:800;margin-bottom:10px" id="adminCourseModeLabel">Новый курс</div>
 
       <div class="admin-inline-grid">
@@ -1986,6 +2107,8 @@ body {
       </div>
 
       <div id="adminTestCategoryList" class="admin-course-list"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2676,9 +2799,11 @@ function renderCourseControls() {
   const btn = document.getElementById('courseSwitcherBtn');
   const label = document.getElementById('courseSwitcherLabel');
   const adminNote = document.getElementById('adminCourseNote');
+  const adminNoteValue = document.getElementById('adminCourseNoteValue');
   if (label) label.textContent = getCurrentCourseLabel();
   if (btn) btn.classList.toggle('visible', !!currentUser && availableCourses.length > 1);
-  if (adminNote) adminNote.textContent = `Курс: ${getCourseById(selectedCourseId).name}`;
+  if (adminNoteValue) adminNoteValue.textContent = `Курс: ${getCourseById(selectedCourseId).name} ▾`;
+  if (adminNote) adminNote.setAttribute('aria-label', `Курс: ${getCourseById(selectedCourseId).name}`);
   renderQuizOlympiadFilters();
   renderAdminQuestionCategoryFilter();
   renderQuestionCategorySelect('addQOlympiad');
@@ -2982,12 +3107,21 @@ function renderCourseSheet() {
       <div class="course-sheet-title">Выбор курса</div>
       <div class="course-sheet-subtitle">Интерфейс обновится автоматически после переключения.</div>
       <div class="course-sheet-list">${items}</div>
+      ${isAdmin ? `
+        <button class="course-option" onclick="openAdminCourseEditorFromSwitcher()">
+          <div class="course-option-main">
+            <div class="course-option-name">⚙️ Редактор курсов</div>
+            <div class="course-option-meta">Создать курс, изменить параметры и управлять категориями тестов</div>
+          </div>
+          <div class="course-option-check">↗</div>
+        </button>
+      ` : ''}
     </div>
   `;
 }
 
 function openCourseSwitcher() {
-  if (!currentUser || availableCourses.length <= 1) return;
+  if (!currentUser || (availableCourses.length <= 1 && !isAdmin)) return;
   closeCourseSwitcher();
   const overlay = document.createElement('div');
   overlay.id = 'courseSwitcherOverlay';
@@ -3002,6 +3136,30 @@ function openCourseSwitcher() {
 function closeCourseSwitcher() {
   const overlay = document.getElementById('courseSwitcherOverlay');
   if (overlay) overlay.remove();
+}
+
+function openAdminCourseEditor() {
+  const modal = document.getElementById('adminCourseEditorModal');
+  if (!modal) return;
+  renderAdminCourseManager();
+  modal.classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAdminCourseEditor() {
+  const modal = document.getElementById('adminCourseEditorModal');
+  if (!modal) return;
+  modal.classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function handleAdminCourseEditorOverlay(event) {
+  if (event.target?.id === 'adminCourseEditorModal') closeAdminCourseEditor();
+}
+
+function openAdminCourseEditorFromSwitcher() {
+  closeCourseSwitcher();
+  openAdminCourseEditor();
 }
 
 async function handleCourseOptionClick(courseId) {
@@ -3978,25 +4136,12 @@ function renderCalendar() {
     eventDates[d].push(ev);
   });
 
-  // Task deadlines from week structure
-  const taskDates = {};
-  for (let w = 1; w <= 35; w++) {
-    const wDate = new Date(getCourseStartDate());
-    wDate.setDate(wDate.getDate() + (w-1)*7 + 6); // end of week = Sunday
-    const key = wDate.toISOString().slice(0,10);
-    if (wDate.getFullYear() === calYear && wDate.getMonth() === calMonth) {
-      if (!taskDates[key]) taskDates[key] = [];
-      taskDates[key].push({ title: `Конец недели ${w}`, type: 'deadline' });
-    }
-  }
-
   for (let d = 1; d <= lastDay.getDate(); d++) {
     const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const isToday = today.getDate()===d && today.getMonth()===calMonth && today.getFullYear()===calYear;
     const evs = eventDates[dateStr] || [];
-    const tds = taskDates[dateStr] || [];
     const hasEvent    = evs.some(e => normalizeEventType(e.type) !== 'deadline') || false;
-    const hasDeadline = evs.some(e=>e.type==='deadline') || tds.length > 0;
+    const hasDeadline = evs.some(e => normalizeEventType(e.type) === 'deadline');
 
     let cls = 'cal-day';
     if (isToday) cls += ' today';
@@ -4027,7 +4172,7 @@ function renderCalendarEvents(filterDate) {
   const el = document.getElementById('calEventsList');
   const months = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
 
-  // Combine firebase events + week deadlines for this month
+  // Show only real events from Firebase / admin panel for this month
   let allEvents = [];
 
   Object.entries(firebaseEvents).forEach(([id, ev]) => {
@@ -4036,23 +4181,6 @@ function renderCalendarEvents(filterDate) {
       allEvents.push({ ...ev, type: normalizeEventType(ev.type), id, source: 'firebase' });
     }
   });
-
-  // Week end deadlines
-  for (let w = 1; w <= 35; w++) {
-    const wDate = new Date(getCourseStartDate());
-    wDate.setDate(wDate.getDate() + (w-1)*7 + 6);
-    if (wDate.getFullYear()===calYear && wDate.getMonth()===calMonth) {
-      const wTasks = getAllTasks().filter(t=>t.week===w);
-      const wDone  = wTasks.filter(t=>state.done[t.id]).length;
-      allEvents.push({
-        date: wDate.toISOString().slice(0,10),
-        title: `📚 Конец недели ${w}`,
-        desc: `${wDone}/${wTasks.length} задач выполнено`,
-        type: 'deadline',
-        source: 'system'
-      });
-    }
-  }
 
   if (filterDate) allEvents = allEvents.filter(e => e.date === filterDate);
   allEvents.sort((a,b) => a.date.localeCompare(b.date));
@@ -4120,6 +4248,7 @@ function adminCourseReset() {
 }
 
 function adminEditCourse(courseId) {
+  openAdminCourseEditor();
   const course = getCourseById(courseId);
   adminCourseEditingId = course.id;
   const idInput = document.getElementById('adminCourseId');
@@ -4135,9 +4264,8 @@ function adminEditCourse(courseId) {
   document.getElementById('adminCourseEndDate').value = course.endDate || '';
   document.getElementById('adminCourseActive').value = course.active === false ? 'false' : 'true';
   document.getElementById('adminCourseLegacyCompat').value = course.legacyCompat ? 'true' : 'false';
-  const section = document.getElementById('adminSectionCourses');
-  if (section && !section.classList.contains('open')) section.classList.add('open');
-  window.scrollTo({ top: section.offsetTop - 20, behavior: 'smooth' });
+  const body = document.querySelector('#adminCourseEditorModal .admin-course-editor-body');
+  if (body) body.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderAdminCourseManager() {
@@ -4197,6 +4325,7 @@ function adminTestCategoryReset() {
 }
 
 function adminEditTestCategory(categoryId) {
+  openAdminCourseEditor();
   const category = getTestCategoryMapForCourse(selectedCourseId)[categoryId];
   if (!category) return;
   const course = getCourseById(selectedCourseId);
@@ -4210,9 +4339,8 @@ function adminEditTestCategory(categoryId) {
   document.getElementById('adminTestCategoryShortName').value = category.shortName || '';
   document.getElementById('adminTestCategorySortOrder').value = Number.isFinite(category.sortOrder) ? String(category.sortOrder) : '';
   document.getElementById('adminTestCategoryActive').value = category.active === false ? 'false' : 'true';
-  const section = document.getElementById('adminSectionCourses');
-  if (section && !section.classList.contains('open')) section.classList.add('open');
-  window.scrollTo({ top: section.offsetTop - 20, behavior: 'smooth' });
+  const body = document.querySelector('#adminCourseEditorModal .admin-course-editor-body');
+  if (body) body.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderAdminTestCategoryManager() {
