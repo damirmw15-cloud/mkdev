@@ -206,6 +206,74 @@ body {
   font-weight: 700;
   color: var(--text2);
 }
+.admin-course-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.admin-course-toolbar button {
+  margin-top: 0;
+}
+.admin-course-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.admin-course-card {
+  border: 1.5px solid var(--border);
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+}
+.admin-course-card.active-course {
+  border-color: var(--c1);
+  background: var(--c5);
+}
+.admin-course-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.admin-course-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1.35;
+}
+.admin-course-desc {
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 700;
+  line-height: 1.45;
+}
+.admin-course-actions {
+  display: flex;
+  gap: 8px;
+}
+.admin-course-actions button {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.admin-course-actions .open-btn {
+  background: var(--c4);
+  color: var(--c1);
+}
+.admin-course-actions .toggle-btn {
+  background: #FFF8E8;
+  color: #C58A16;
+}
+.admin-course-actions .edit-btn {
+  background: #EEF7FF;
+  color: #4A78A6;
+}
 .streak-pill {
   background: rgba(255,255,255,0.25);
   border-radius: 20px;
@@ -1787,6 +1855,128 @@ body {
 <div class="tab-content" id="tab-admin">
   <div class="admin-course-note" id="adminCourseNote">Курс: —</div>
 
+  <div class="admin-section" id="adminSectionCourses">
+    <button class="admin-section-header" onclick="toggleAdminSection('adminSectionCourses')">
+      <div class="admin-section-title">🎓 Курсы и переключение</div>
+      <span class="admin-section-arrow">▼</span>
+    </button>
+    <div class="admin-section-body">
+      <div style="font-size:13px;color:var(--text2);font-weight:800;margin-bottom:10px" id="adminCourseModeLabel">Новый курс</div>
+
+      <div class="admin-inline-grid">
+        <div class="admin-form-row">
+          <label class="admin-label">courseId</label>
+          <input type="text" class="admin-input" id="adminCourseId" placeholder="Например: course_history">
+        </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Порядок</label>
+          <input type="number" class="admin-input" id="adminCourseSortOrder" placeholder="10">
+        </div>
+      </div>
+
+      <div class="admin-inline-grid">
+        <div class="admin-form-row">
+          <label class="admin-label">Название курса</label>
+          <input type="text" class="admin-input" id="adminCourseName" placeholder="История — летний поток">
+        </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Короткое имя</label>
+          <input type="text" class="admin-input" id="adminCourseShortName" placeholder="История">
+        </div>
+      </div>
+
+      <div class="admin-inline-grid">
+        <div class="admin-form-row">
+          <label class="admin-label">Дата старта</label>
+          <input type="date" class="admin-input" id="adminCourseStartDate">
+        </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Дата окончания</label>
+          <input type="date" class="admin-input" id="adminCourseEndDate">
+        </div>
+      </div>
+
+      <div class="admin-form-row">
+        <label class="admin-label">Описание</label>
+        <textarea class="admin-textarea" id="adminCourseDescription" placeholder="Коротко опиши курс и поток"></textarea>
+      </div>
+
+      <div class="admin-inline-grid">
+        <div class="admin-form-row">
+          <label class="admin-label">Статус</label>
+          <select class="admin-select" id="adminCourseActive">
+            <option value="true">Активен</option>
+            <option value="false">Скрыт для учеников</option>
+          </select>
+        </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Legacy fallback</label>
+          <select class="admin-select" id="adminCourseLegacyCompat">
+            <option value="false">Только новая структура</option>
+            <option value="true">Разрешить fallback</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="admin-course-toolbar">
+        <button class="admin-btn blue" style="flex:2" onclick="adminSaveCourse()">💾 Сохранить курс</button>
+        <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="adminCourseReset()">Сбросить</button>
+      </div>
+
+      <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:10px">
+        После создания можно сразу открыть курс для редактирования задач, календаря и вопросов.
+      </div>
+
+      <div id="adminCourseList" class="admin-course-list"></div>
+
+      <div style="height:1px;background:var(--border);margin:14px 0"></div>
+      <div style="font-family:'Unbounded',sans-serif;font-size:12px;color:var(--text);font-weight:700;margin-bottom:10px">🧪 Олимпиады / категории тестов</div>
+
+      <div style="font-size:13px;color:var(--text2);font-weight:800;margin-bottom:10px" id="adminTestCategoryModeLabel">Новая категория тестов</div>
+
+      <div class="admin-inline-grid">
+        <div class="admin-form-row">
+          <label class="admin-label">categoryId</label>
+          <input type="text" class="admin-input" id="adminTestCategoryId" placeholder="Например: ege_history">
+        </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Порядок</label>
+          <input type="number" class="admin-input" id="adminTestCategorySortOrder" placeholder="10">
+        </div>
+      </div>
+
+      <div class="admin-inline-grid">
+        <div class="admin-form-row">
+          <label class="admin-label">Название</label>
+          <input type="text" class="admin-input" id="adminTestCategoryName" placeholder="ЕГЭ по истории">
+        </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Короткое имя</label>
+          <input type="text" class="admin-input" id="adminTestCategoryShortName" placeholder="ЕГЭ">
+        </div>
+      </div>
+
+      <div class="admin-form-row">
+        <label class="admin-label">Статус</label>
+        <select class="admin-select" id="adminTestCategoryActive">
+          <option value="true">Активна</option>
+          <option value="false">Скрыта</option>
+        </select>
+      </div>
+
+      <div class="admin-course-toolbar">
+        <button class="admin-btn blue" style="flex:2" onclick="adminSaveTestCategory()">💾 Сохранить категорию</button>
+        <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="adminTestCategoryReset()">Сбросить</button>
+      </div>
+
+      <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:10px">
+        Эти категории используются в фильтрах тестов и в формах добавления/редактирования вопросов выбранного курса.
+      </div>
+
+      <div id="adminTestCategoryList" class="admin-course-list"></div>
+    </div>
+  </div>
+
   <div class="admin-section" id="adminSectionEventsAdd">
     <button class="admin-section-header" onclick="toggleAdminSection('adminSectionEventsAdd')">
       <div class="admin-section-title">📅 Добавить событие / дедлайн</div>
@@ -1944,14 +2134,8 @@ body {
         <input type="text" class="admin-input" id="addQSubtopic" placeholder="Уточни тему">
       </div>
       <div class="admin-form-row">
-        <label class="admin-label">Олимпиада</label>
-        <select class="admin-select" id="addQOlympiad">
-          <option value="vsosh">ВсОШ</option>
-          <option value="vp_obsh" selected>ВП (Общество)</option>
-          <option value="lomonosov">Ломоносов</option>
-          <option value="vp_soc">ВП (Социология)</option>
-          <option value="izumrud">Изумруд</option>
-        </select>
+        <label class="admin-label">Олимпиада / категория</label>
+        <select class="admin-select" id="addQOlympiad"></select>
       </div>
       <div class="admin-form-row">
         <label class="admin-label">Год</label>
@@ -2008,8 +2192,13 @@ body {
       <span class="admin-section-arrow">▼</span>
     </button>
     <div class="admin-section-body">
-      <div class="admin-form-row">
-        <input type="text" class="admin-input" id="qSearchInput" placeholder="🔍 Поиск по тексту или теме..." oninput="renderAdminQuestionList()">
+      <div class="admin-inline-grid">
+        <div class="admin-form-row">
+          <input type="text" class="admin-input" id="qSearchInput" placeholder="🔍 Поиск по тексту или теме..." oninput="renderAdminQuestionList()">
+        </div>
+        <div class="admin-form-row">
+          <select class="admin-select" id="qCategoryFilter" onchange="renderAdminQuestionList()"></select>
+        </div>
       </div>
       <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:8px" id="qListCount"></div>
       <div id="adminQuestionList"></div>
@@ -2036,14 +2225,8 @@ body {
         <input type="text" class="admin-input" id="editQSubtopic">
       </div>
       <div class="admin-form-row">
-        <label class="admin-label">Олимпиада</label>
-        <select class="admin-select" id="editQOlympiad">
-          <option value="vsosh">ВсОШ</option>
-          <option value="vp_obsh">ВП (Общество)</option>
-          <option value="lomonosov">Ломоносов</option>
-          <option value="vp_soc">ВП (Социология)</option>
-          <option value="izumrud">Изумруд</option>
-        </select>
+        <label class="admin-label">Олимпиада / категория</label>
+        <select class="admin-select" id="editQOlympiad"></select>
       </div>
       <div class="admin-form-row">
         <label class="admin-label">Год</label>
@@ -2146,14 +2329,7 @@ body {
 
   <!-- Olympiad filter (hidden by default) -->
   <div id="quizOlympiadFilter" style="display:none;margin-bottom:12px">
-    <div class="quiz-filter-row">
-      <button class="quiz-filter-btn active" onclick="setQuizFilter('olympiad','all')">Все</button>
-      <button class="quiz-filter-btn" onclick="setQuizFilter('olympiad','vsosh')">ВсОШ</button>
-      <button class="quiz-filter-btn" onclick="setQuizFilter('olympiad','vp_obsh')">ВП (Общество)</button>
-      <button class="quiz-filter-btn" onclick="setQuizFilter('olympiad','lomonosov')">Ломоносов</button>
-      <button class="quiz-filter-btn" onclick="setQuizFilter('olympiad','vp_soc')">ВП (Социология)</button>
-      <button class="quiz-filter-btn" onclick="setQuizFilter('olympiad','izumrud')">Изумруд</button>
-    </div>
+    <div class="quiz-filter-row" id="quizOlympiadFilterButtons"></div>
   </div>
 
   <!-- Weak themes list -->
@@ -2244,6 +2420,14 @@ const LEVELS = [
   { level:5, rank:'Легенда',  xpMin:900,  xpMax:9999 },
 ];
 
+const DEFAULT_TEST_CATEGORIES = {
+  vsosh:     { id:'vsosh',     name:'ВсОШ',             shortName:'ВсОШ',        active:true, sortOrder:10 },
+  vp_obsh:   { id:'vp_obsh',   name:'ВП (Общество)',    shortName:'ВП (Общ.)',   active:true, sortOrder:20 },
+  lomonosov: { id:'lomonosov', name:'Ломоносов',        shortName:'Ломоносов',   active:true, sortOrder:30 },
+  vp_soc:    { id:'vp_soc',    name:'ВП (Социология)',  shortName:'ВП (Соц.)',   active:true, sortOrder:40 },
+  izumrud:   { id:'izumrud',   name:'Изумруд',          shortName:'Изумруд',     active:true, sortOrder:50 },
+};
+
 const ACHIEVEMENTS = [
   // Visible
   { id:'a1', icon:'🌟', name:'Первый шаг',   desc:'Выполни первую задачу',           secret:false, target:1,  type:'done' },
@@ -2284,6 +2468,7 @@ let selectedCourseId = DEFAULT_COURSE_ID;
 let courseSubscriptions = [];
 let courseCatalogReadyResolver = null;
 let courseContextReady = false;
+let adminTestCategoryEditingId = null;
 const courseCatalogReady = new Promise(resolve => { courseCatalogReadyResolver = resolve; });
 
 function escapeHtml(value) {
@@ -2311,6 +2496,9 @@ function getDefaultCourse() {
 
 function normalizeCourse(courseId, raw = {}) {
   const fallback = getDefaultCourse();
+  const rawCategories = raw.testCategories && typeof raw.testCategories === 'object'
+    ? raw.testCategories
+    : null;
   return {
     ...fallback,
     ...raw,
@@ -2323,6 +2511,7 @@ function normalizeCourse(courseId, raw = {}) {
     sortOrder: Number.isFinite(raw.sortOrder) ? raw.sortOrder : fallback.sortOrder,
     startDate: raw.startDate || fallback.startDate,
     endDate: raw.endDate || fallback.endDate,
+    testCategories: rawCategories ? { ...rawCategories } : null,
   };
 }
 
@@ -2340,6 +2529,85 @@ function getCourseById(courseId = selectedCourseId) {
 
 function getCurrentCourseLabel() {
   return getCourseById(selectedCourseId)?.shortName || 'Курс';
+}
+
+function normalizeTestCategory(categoryId, raw = {}) {
+  return {
+    id: categoryId || raw.id || '',
+    name: raw.name || raw.shortName || categoryId || 'Категория',
+    shortName: raw.shortName || raw.name || categoryId || 'Категория',
+    active: raw.active !== false,
+    sortOrder: Number.isFinite(raw.sortOrder) ? raw.sortOrder : 0,
+  };
+}
+
+function getDefaultTestCategories() {
+  return Object.entries(DEFAULT_TEST_CATEGORIES).reduce((acc, [id, raw]) => {
+    acc[id] = normalizeTestCategory(id, raw);
+    return acc;
+  }, {});
+}
+
+function getTestCategoriesForCourse(courseId = selectedCourseId) {
+  const course = getCourseById(courseId);
+  const source = course.testCategories && Object.keys(course.testCategories).length
+    ? course.testCategories
+    : getDefaultTestCategories();
+  return Object.entries(source)
+    .map(([id, raw]) => normalizeTestCategory(id, raw || {}))
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'ru'));
+}
+
+function getCurrentCourseTestCategories() {
+  return getTestCategoriesForCourse(selectedCourseId);
+}
+
+function getTestCategoryMapForCourse(courseId = selectedCourseId) {
+  return getTestCategoriesForCourse(courseId).reduce((acc, item) => {
+    acc[item.id] = item;
+    return acc;
+  }, {});
+}
+
+function getActiveTestCategoriesForCourse(courseId = selectedCourseId) {
+  return getTestCategoriesForCourse(courseId).filter(item => item.active !== false);
+}
+
+function getDefaultTestCategoryId(courseId = selectedCourseId) {
+  const first = getActiveTestCategoriesForCourse(courseId)[0] || getTestCategoriesForCourse(courseId)[0];
+  return first?.id || 'default_category';
+}
+
+function getTestCategoryLabel(categoryId, courseId = selectedCourseId, { short = false } = {}) {
+  const map = getTestCategoryMapForCourse(courseId);
+  const item = map[categoryId];
+  if (!item) return categoryId || 'Без категории';
+  return short ? (item.shortName || item.name) : item.name;
+}
+
+function normalizeQuestionCourse(question = {}) {
+  return question.courseId || DEFAULT_COURSE_ID;
+}
+
+function normalizeQuestionCategory(value, courseId = selectedCourseId) {
+  const raw = String(value || '').trim();
+  const categoryMap = getTestCategoryMapForCourse(courseId);
+  if (raw && categoryMap[raw]) return raw;
+  const defaultMap = getDefaultTestCategories();
+  if (raw && defaultMap[raw]) return raw;
+  return getDefaultTestCategoryId(courseId);
+}
+
+function normalizeQuestionRecord(question = {}, courseId = selectedCourseId) {
+  const normalizedCourseId = normalizeQuestionCourse(question);
+  const normalizedCategory = normalizeQuestionCategory(question.olympiad || question.categoryId, courseId);
+  return {
+    ...question,
+    id: question.id || '',
+    courseId: normalizedCourseId,
+    olympiad: normalizedCategory,
+    categoryId: normalizedCategory,
+  };
 }
 
 function getCourseStartDate() {
@@ -2399,6 +2667,18 @@ function renderCourseControls() {
   if (label) label.textContent = getCurrentCourseLabel();
   if (btn) btn.classList.toggle('visible', !!currentUser && availableCourses.length > 1);
   if (adminNote) adminNote.textContent = `Курс: ${getCourseById(selectedCourseId).name}`;
+  renderQuizOlympiadFilters();
+  renderAdminQuestionCategoryFilter();
+  renderQuestionCategorySelect('addQOlympiad');
+  if (editingQId) {
+    const q = quizQuestions.find(item => item.id === editingQId);
+    renderQuestionCategorySelect('editQOlympiad', q?.olympiad || q?.categoryId);
+  } else {
+    renderQuestionCategorySelect('editQOlympiad');
+  }
+  if (isAdmin && document.getElementById('tab-admin')?.classList.contains('active')) {
+    renderAdminCourseManager();
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -2555,6 +2835,7 @@ function updateCourseDependentViews() {
   renderQuizStats();
   renderWeakThemes();
   if (document.getElementById('tab-admin').classList.contains('active')) {
+    renderAdminCourseManager();
     renderAdminEvents();
     adminLoadStudents();
     adminLoadQuizStats();
@@ -2622,7 +2903,7 @@ function subscribeCourseCollections(courseId = selectedCourseId) {
       getCourseCollectionPath('questions', courseId),
       isLegacyCompatCourse(courseId) ? 'questions' : null,
       value => {
-        quizQuestions = value ? Object.values(value).map(q => ({ ...q, olympiad: normalizeOlympiadValue(q.olympiad) })) : [];
+        quizQuestions = value ? Object.values(value).map(q => normalizeQuestionRecord(q, courseId)) : [];
         renderAdminQuestionList();
       }
     )
@@ -2662,6 +2943,7 @@ async function switchCourse(courseId, options = {}) {
   quizResults = {};
   currentQuestion = null;
   quizAnswered = false;
+  quizOlympiadFilter = 'all';
 
   renderCourseControls();
   subscribeCourseCollections(nextCourseId);
@@ -2713,6 +2995,71 @@ function closeCourseSwitcher() {
 async function handleCourseOptionClick(courseId) {
   closeCourseSwitcher();
   await switchCourse(courseId);
+}
+
+function renderQuizOlympiadFilters() {
+  const wrap = document.getElementById('quizOlympiadFilterButtons');
+  if (!wrap) return;
+  const categories = getActiveTestCategoriesForCourse();
+  if (quizOlympiadFilter !== 'all' && !categories.some(cat => cat.id === quizOlympiadFilter)) {
+    quizOlympiadFilter = 'all';
+  }
+  const buttons = [
+    `<button class="quiz-filter-btn ${quizOlympiadFilter === 'all' ? 'active' : ''}" onclick="setQuizFilter('olympiad','all', event)">Все</button>`,
+    ...categories.map(cat => `
+      <button class="quiz-filter-btn ${quizOlympiadFilter === cat.id ? 'active' : ''}" onclick="setQuizFilter('olympiad','${cat.id}', event)">${escapeHtml(cat.shortName || cat.name)}</button>
+    `)
+  ];
+  wrap.innerHTML = buttons.join('');
+}
+
+function renderQuestionCategorySelect(selectId, selectedValue) {
+  const select = document.getElementById(selectId);
+  if (!select) return;
+  const categories = getTestCategoriesForCourse();
+  const normalizedValue = normalizeQuestionCategory(selectedValue, selectedCourseId);
+  select.innerHTML = categories.map(cat => `
+    <option value="${cat.id}" ${normalizedValue === cat.id ? 'selected' : ''}>
+      ${escapeHtml(cat.name)}
+    </option>
+  `).join('');
+}
+
+function renderAdminQuestionCategoryFilter() {
+  const select = document.getElementById('qCategoryFilter');
+  if (!select) return;
+  const categories = getTestCategoriesForCourse(selectedCourseId);
+  const currentValue = select.value || 'all';
+  const hasCurrentValue = currentValue === 'all' || categories.some(cat => cat.id === currentValue);
+  select.innerHTML = `
+    <option value="all">Все категории курса</option>
+    ${categories.map(cat => `
+      <option value="${cat.id}">
+        ${cat.active === false ? '⏸ ' : ''}${escapeHtml(cat.name)}
+      </option>
+    `).join('')}
+  `;
+  select.value = hasCurrentValue ? currentValue : 'all';
+}
+
+function getMaterializedCourseTestCategories(courseId = selectedCourseId) {
+  return getTestCategoriesForCourse(courseId).reduce((acc, item) => {
+    acc[item.id] = {
+      id: item.id,
+      name: item.name,
+      shortName: item.shortName,
+      active: item.active !== false,
+      sortOrder: Number.isFinite(item.sortOrder) ? item.sortOrder : 0,
+    };
+    return acc;
+  }, {});
+}
+
+function syncCourseTestCategoriesLocally(courseId, categories) {
+  courseCatalog[courseId] = normalizeCourse(courseId, {
+    ...getCourseById(courseId),
+    testCategories: categories
+  });
 }
 
 // ═══════════════════════════════════════════════════
@@ -3165,7 +3512,7 @@ function switchTab(tab) {
   const idx = tabs.indexOf(tab);
   document.querySelectorAll('.nav-tab')[idx]?.classList.add('active');
   if (tab === 'calendar') renderCalendar();
-  if (tab === 'admin') { renderAdminEvents(); adminLoadStudents(); adminLoadQuizStats(); renderAdminQuestionList(); renderTaskEditorWeekOptions(); renderTaskEditorList(); }
+  if (tab === 'admin') { renderAdminCourseManager(); renderAdminEvents(); adminLoadStudents(); adminLoadQuizStats(); renderAdminQuestionList(); renderTaskEditorWeekOptions(); renderTaskEditorList(); }
   if (tab === 'quiz') { renderQuizStats(); if (quizMode === 'weak') renderWeakThemes(); }
   if (tab !== 'tasks') renderAll();
 }
@@ -3223,6 +3570,7 @@ let firebaseEvents = {};
 let progressSaveInterval = null;
 let firebaseTasks = [];
 let taskEditorEditingId = null;
+let adminCourseEditingId = null;
 
 // ═══════════════════════════════════════════════════
 //  AUTH SCREEN
@@ -3722,6 +4070,310 @@ function renderCalendarEvents(filterDate) {
   }).join('');
 }
 
+function slugifyCourseId(value) {
+  const translitMap = {
+    а:'a', б:'b', в:'v', г:'g', д:'d', е:'e', ё:'e', ж:'zh', з:'z', и:'i', й:'y',
+    к:'k', л:'l', м:'m', н:'n', о:'o', п:'p', р:'r', с:'s', т:'t', у:'u', ф:'f',
+    х:'h', ц:'ts', ч:'ch', ш:'sh', щ:'sch', ъ:'', ы:'y', ь:'', э:'e', ю:'yu', я:'ya'
+  };
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .split('')
+    .map(ch => translitMap[ch] ?? ch)
+    .join('')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .replace(/_{2,}/g, '_');
+}
+
+function adminCourseReset() {
+  adminCourseEditingId = null;
+  const idInput = document.getElementById('adminCourseId');
+  const modeLabel = document.getElementById('adminCourseModeLabel');
+  if (modeLabel) modeLabel.textContent = 'Новый курс';
+  if (idInput) {
+    idInput.value = '';
+    idInput.readOnly = false;
+    idInput.style.opacity = '1';
+  }
+  document.getElementById('adminCourseName').value = '';
+  document.getElementById('adminCourseShortName').value = '';
+  document.getElementById('adminCourseDescription').value = '';
+  document.getElementById('adminCourseSortOrder').value = '';
+  document.getElementById('adminCourseStartDate').value = '';
+  document.getElementById('adminCourseEndDate').value = '';
+  document.getElementById('adminCourseActive').value = 'true';
+  document.getElementById('adminCourseLegacyCompat').value = 'false';
+}
+
+function adminEditCourse(courseId) {
+  const course = getCourseById(courseId);
+  adminCourseEditingId = course.id;
+  const idInput = document.getElementById('adminCourseId');
+  idInput.value = course.id;
+  idInput.readOnly = true;
+  idInput.style.opacity = '0.7';
+  document.getElementById('adminCourseModeLabel').textContent = `Редактирование курса: ${course.name}`;
+  document.getElementById('adminCourseName').value = course.name || '';
+  document.getElementById('adminCourseShortName').value = course.shortName || '';
+  document.getElementById('adminCourseDescription').value = course.description || '';
+  document.getElementById('adminCourseSortOrder').value = Number.isFinite(course.sortOrder) ? String(course.sortOrder) : '';
+  document.getElementById('adminCourseStartDate').value = course.startDate || '';
+  document.getElementById('adminCourseEndDate').value = course.endDate || '';
+  document.getElementById('adminCourseActive').value = course.active === false ? 'false' : 'true';
+  document.getElementById('adminCourseLegacyCompat').value = course.legacyCompat ? 'true' : 'false';
+  const section = document.getElementById('adminSectionCourses');
+  if (section && !section.classList.contains('open')) section.classList.add('open');
+  window.scrollTo({ top: section.offsetTop - 20, behavior: 'smooth' });
+}
+
+function renderAdminCourseManager() {
+  const listEl = document.getElementById('adminCourseList');
+  if (!listEl) return;
+
+  const courses = getSortedCourses();
+  if (!courses.length) {
+    listEl.innerHTML = '<div class="empty-state"><div class="e-icon">🎓</div>Курсов пока нет</div>';
+    return;
+  }
+
+  listEl.innerHTML = courses.map(course => `
+    <div class="admin-course-card ${course.id === selectedCourseId ? 'active-course' : ''}">
+      <div class="admin-course-top">
+        <div style="min-width:0">
+          <div class="admin-course-name">${escapeHtml(course.name)}</div>
+          <div class="admin-course-desc">${escapeHtml(course.description || 'Без описания')}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div class="admin-chip">${course.id === selectedCourseId ? 'Текущий курс' : 'courseId: ' + course.id}</div>
+        </div>
+      </div>
+      <div class="admin-task-meta">
+        <span class="admin-chip">${course.shortName || course.name}</span>
+        <span class="admin-chip">${course.active === false ? 'Скрыт' : 'Активен'}</span>
+        <span class="admin-chip">sort: ${course.sortOrder || 0}</span>
+        <span class="admin-chip">${course.startDate || 'без даты старта'}</span>
+        <span class="admin-chip">${course.endDate || 'без даты окончания'}</span>
+        ${course.legacyCompat ? '<span class="admin-chip">legacy fallback</span>' : ''}
+      </div>
+      <div class="admin-course-actions">
+        <button class="open-btn" onclick="switchCourse('${course.id}')">Открыть</button>
+        <button class="edit-btn" onclick="adminEditCourse('${course.id}')">Ред.</button>
+        <button class="toggle-btn" onclick="adminToggleCourseActive('${course.id}')">${course.active === false ? 'Включить' : 'Скрыть'}</button>
+      </div>
+    </div>
+  `).join('');
+
+  renderAdminTestCategoryManager();
+}
+
+function adminTestCategoryReset() {
+  adminTestCategoryEditingId = null;
+  const idInput = document.getElementById('adminTestCategoryId');
+  if (idInput) {
+    idInput.value = '';
+    idInput.readOnly = false;
+    idInput.style.opacity = '1';
+  }
+  document.getElementById('adminTestCategoryModeLabel').textContent = 'Новая категория тестов';
+  document.getElementById('adminTestCategoryName').value = '';
+  document.getElementById('adminTestCategoryShortName').value = '';
+  document.getElementById('adminTestCategorySortOrder').value = '';
+  document.getElementById('adminTestCategoryActive').value = 'true';
+}
+
+function adminEditTestCategory(categoryId) {
+  const category = getTestCategoryMapForCourse(selectedCourseId)[categoryId];
+  if (!category) return;
+  adminTestCategoryEditingId = category.id;
+  const idInput = document.getElementById('adminTestCategoryId');
+  idInput.value = category.id;
+  idInput.readOnly = true;
+  idInput.style.opacity = '0.7';
+  document.getElementById('adminTestCategoryModeLabel').textContent = `Редактирование категории: ${category.name}`;
+  document.getElementById('adminTestCategoryName').value = category.name || '';
+  document.getElementById('adminTestCategoryShortName').value = category.shortName || '';
+  document.getElementById('adminTestCategorySortOrder').value = Number.isFinite(category.sortOrder) ? String(category.sortOrder) : '';
+  document.getElementById('adminTestCategoryActive').value = category.active === false ? 'false' : 'true';
+  const section = document.getElementById('adminSectionCourses');
+  if (section && !section.classList.contains('open')) section.classList.add('open');
+  window.scrollTo({ top: section.offsetTop - 20, behavior: 'smooth' });
+}
+
+function renderAdminTestCategoryManager() {
+  const listEl = document.getElementById('adminTestCategoryList');
+  if (!listEl) return;
+  const categories = getTestCategoriesForCourse(selectedCourseId);
+  if (!categories.length) {
+    listEl.innerHTML = '<div class="empty-state"><div class="e-icon">🧪</div>Категорий тестов пока нет</div>';
+    return;
+  }
+
+  listEl.innerHTML = categories.map(category => `
+    <div class="admin-course-card">
+      <div class="admin-course-top">
+        <div style="min-width:0">
+          <div class="admin-course-name">${escapeHtml(category.name)}</div>
+          <div class="admin-course-desc">id: ${escapeHtml(category.id)} · short: ${escapeHtml(category.shortName || category.name)}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div class="admin-chip">${category.active === false ? 'Скрыта' : 'Активна'}</div>
+        </div>
+      </div>
+      <div class="admin-task-meta">
+        <span class="admin-chip">sort: ${category.sortOrder || 0}</span>
+        ${category.id === getDefaultTestCategoryId(selectedCourseId) ? '<span class="admin-chip">по умолчанию</span>' : ''}
+      </div>
+      <div class="admin-course-actions">
+        <button class="edit-btn" onclick="adminEditTestCategory('${category.id}')">Ред.</button>
+        <button class="toggle-btn" onclick="adminToggleTestCategoryActive('${category.id}')">${category.active === false ? 'Включить' : 'Скрыть'}</button>
+        <button class="open-btn" onclick="adminDeleteTestCategory('${category.id}')">Удалить</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function adminToggleTestCategoryActive(categoryId) {
+  if (!db) return;
+  const category = getTestCategoryMapForCourse(selectedCourseId)[categoryId];
+  if (!category) return;
+  const nextActive = category.active === false;
+  const categories = getMaterializedCourseTestCategories(selectedCourseId);
+  categories[categoryId] = {
+    ...categories[categoryId],
+    active: nextActive,
+    updatedAt: Date.now(),
+  };
+  await db.ref(`${COURSE_META_PATH}/${selectedCourseId}/testCategories`).set(categories);
+  syncCourseTestCategoriesLocally(selectedCourseId, categories);
+  renderAdminTestCategoryManager();
+  renderCourseControls();
+  showToast(nextActive ? '✅ Категория включена' : '🙈 Категория скрыта');
+}
+
+async function adminDeleteTestCategory(categoryId) {
+  if (!db) return;
+  if (!confirm('Удалить эту категорию тестов?')) return;
+  const categories = getMaterializedCourseTestCategories(selectedCourseId);
+  delete categories[categoryId];
+  await db.ref(`${COURSE_META_PATH}/${selectedCourseId}/testCategories`).set(categories);
+  syncCourseTestCategoriesLocally(selectedCourseId, categories);
+  if (adminTestCategoryEditingId === categoryId) adminTestCategoryReset();
+  renderAdminTestCategoryManager();
+  renderCourseControls();
+  showToast('🗑️ Категория удалена');
+}
+
+async function adminSaveTestCategory() {
+  if (!db) { showToast('⚠️ Firebase не подключён'); return; }
+  const rawId = document.getElementById('adminTestCategoryId').value.trim();
+  const name = document.getElementById('adminTestCategoryName').value.trim();
+  const shortName = document.getElementById('adminTestCategoryShortName').value.trim();
+  const sortOrder = parseInt(document.getElementById('adminTestCategorySortOrder').value, 10);
+  const active = document.getElementById('adminTestCategoryActive').value === 'true';
+
+  if (!name) {
+    showToast('⚠️ Заполни название категории');
+    return;
+  }
+
+  const categoryId = adminTestCategoryEditingId || rawId || slugifyCourseId(name);
+  if (!categoryId) {
+    showToast('⚠️ Укажи categoryId или название');
+    return;
+  }
+
+  const currentCourseMeta = getCourseById(selectedCourseId);
+  const categories = getMaterializedCourseTestCategories(selectedCourseId);
+  const existing = categories[categoryId] || {};
+  const isEditing = !!adminTestCategoryEditingId;
+  const payload = {
+    ...existing,
+    id: categoryId,
+    name,
+    shortName: shortName || name,
+    active,
+    sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0,
+    updatedAt: Date.now(),
+  };
+  if (!existing.createdAt) payload.createdAt = Date.now();
+
+  categories[categoryId] = payload;
+  await db.ref(`${COURSE_META_PATH}/${selectedCourseId}/testCategories`).set(categories);
+  syncCourseTestCategoriesLocally(selectedCourseId, categories);
+  renderAdminTestCategoryManager();
+  renderCourseControls();
+  adminTestCategoryReset();
+  showToast(isEditing ? '✅ Категория обновлена' : '✅ Категория создана');
+}
+
+async function adminToggleCourseActive(courseId) {
+  if (!db) return;
+  const course = getCourseById(courseId);
+  const nextActive = course.active === false;
+  await db.ref(`${COURSE_META_PATH}/${courseId}`).update({
+    active: nextActive,
+    updatedAt: Date.now(),
+  });
+  courseCatalog[courseId] = normalizeCourse(courseId, { ...course, active: nextActive, updatedAt: Date.now() });
+  availableCourses = getAvailableCoursesForUser({});
+  renderAdminCourseManager();
+  showToast(nextActive ? '✅ Курс снова активен' : '🙈 Курс скрыт для учеников');
+}
+
+async function adminSaveCourse() {
+  if (!db) { showToast('⚠️ Firebase не подключён'); return; }
+
+  const rawId = document.getElementById('adminCourseId').value.trim();
+  const name = document.getElementById('adminCourseName').value.trim();
+  const shortName = document.getElementById('adminCourseShortName').value.trim();
+  const description = document.getElementById('adminCourseDescription').value.trim();
+  const sortOrder = parseInt(document.getElementById('adminCourseSortOrder').value, 10);
+  const startDate = document.getElementById('adminCourseStartDate').value;
+  const endDate = document.getElementById('adminCourseEndDate').value;
+  const active = document.getElementById('adminCourseActive').value === 'true';
+  const legacyCompat = document.getElementById('adminCourseLegacyCompat').value === 'true';
+
+  if (!name) {
+    showToast('⚠️ Заполни название курса');
+    return;
+  }
+
+  const courseId = adminCourseEditingId || rawId || slugifyCourseId(name);
+  if (!courseId) {
+    showToast('⚠️ Укажи courseId или название, из которого его можно собрать');
+    return;
+  }
+
+  const existing = courseCatalog[courseId] || {};
+  const payload = {
+    ...existing,
+    id: courseId,
+    name,
+    shortName: shortName || name,
+    description,
+    sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0,
+    active,
+    legacyCompat,
+    startDate: startDate || '',
+    endDate: endDate || '',
+    updatedAt: Date.now(),
+  };
+  if (!existing.createdAt) payload.createdAt = Date.now();
+
+  await db.ref(`${COURSE_META_PATH}/${courseId}`).set(payload);
+  courseCatalog[courseId] = normalizeCourse(courseId, payload);
+  availableCourses = getAvailableCoursesForUser({});
+  showToast(adminCourseEditingId ? '✅ Курс обновлён' : '✅ Курс создан');
+  if (!adminCourseEditingId) {
+    await switchCourse(courseId);
+  } else {
+    renderAdminCourseManager();
+  }
+  adminCourseReset();
+}
+
 // ═══════════════════════════════════════════════════
 //  ADMIN FUNCTIONS
 // ═══════════════════════════════════════════════════
@@ -4028,12 +4680,6 @@ let quizAnswered = false;
 let addQType = 'single';
 let quizSession = { correct: 0, total: 0 }; // session stats
 
-function normalizeOlympiadValue(value) {
-  const normalized = String(value || '').trim();
-  const allowed = ['vsosh', 'vp_obsh', 'lomonosov', 'vp_soc', 'izumrud'];
-  return allowed.includes(normalized) ? normalized : 'vp_obsh';
-}
-
 // ─── Load questions from Firebase ───
 function loadQuizQuestions() {
   return;
@@ -4101,11 +4747,12 @@ function setQuizMode(mode) {
   quizAnswered = false;
 }
 
-function setQuizFilter(type, val) {
+function setQuizFilter(type, val, evt) {
   if (type === 'theme') quizThemeFilter = val;
   if (type === 'olympiad') quizOlympiadFilter = val;
   document.querySelectorAll(`#quiz${type.charAt(0).toUpperCase()+type.slice(1)}Filter .quiz-filter-btn`).forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
+  const target = evt?.target || window.event?.target || globalThis.event?.target;
+  if (target) target.classList.add('active');
 }
 
 // ─── Get filtered questions ───
@@ -4177,7 +4824,6 @@ function quizNext() {
 // ─── Render question ───
 function renderQuestion(q) {
   const area = document.getElementById('quizQuestionArea');
-  const olympiadLabels = { vsosh:'ВсОШ', vp_obsh:'ВП (Общество)', lomonosov:'Ломоносов', vp_soc:'ВП (Социология)', izumrud:'Изумруд' };
   const themeIcons = { sociology:'👥', politics:'🏛️', economics:'💰', law:'⚖️', philosophy:'🧠', culturology:'🎨' };
 
   let optionsHTML = '';
@@ -4204,7 +4850,7 @@ function renderQuestion(q) {
     <div class="quiz-question-card">
       <div class="quiz-meta">
         <span class="quiz-badge">${themeIcons[q.theme]||''} ${CATEGORIES[q.theme]?.name||q.theme}</span>
-        <span class="quiz-badge olympiad">${olympiadLabels[q.olympiad]||q.olympiad} ${q.year||''}</span>
+        <span class="quiz-badge olympiad">${getTestCategoryLabel(q.olympiad, q.courseId || selectedCourseId)} ${q.year||''}</span>
         ${q.subtopic ? `<span class="quiz-badge theme">${q.subtopic}</span>` : ''}
       </div>
       <div class="quiz-question-text">${q.question}</div>
@@ -4427,7 +5073,7 @@ function adminAddQuestion() {
   if (!db) { showToast('⚠️ Firebase не подключён'); return; }
   const theme    = document.getElementById('addQTheme').value;
   const subtopic = document.getElementById('addQSubtopic').value.trim();
-  const olympiad = document.getElementById('addQOlympiad').value;
+  const olympiad = normalizeQuestionCategory(document.getElementById('addQOlympiad').value, selectedCourseId);
   const year     = document.getElementById('addQYear').value;
   const text     = document.getElementById('addQText').value.trim();
   const explanation = document.getElementById('addQExplanation').value.trim();
@@ -4438,10 +5084,12 @@ function adminAddQuestion() {
     id: 'q_' + Date.now(),
     type: addQType,
     theme, subtopic, olympiad,
+    categoryId: olympiad,
     year: year ? parseInt(year) : null,
     question: text,
     explanation,
     createdAt: Date.now(),
+    courseId: selectedCourseId,
   };
 
   if (addQType === 'single' || addQType === 'multi') {
@@ -4476,6 +5124,7 @@ function adminAddQuestion() {
       document.getElementById('addQCorrect').value = '';
       document.getElementById('addQPairs').value = '';
       document.getElementById('addQExplanation').value = '';
+      renderQuestionCategorySelect('addQOlympiad');
       showToast(`✅ Вопрос добавлен! Всего: ${quizQuestions.length}`);
     })
     .catch(() => showToast('❌ Ошибка сохранения'));
@@ -4532,14 +5181,18 @@ function renderAdminQuestionList() {
   if (!el) return;
 
   const search = (document.getElementById('qSearchInput')?.value || '').toLowerCase();
+  const categoryFilter = document.getElementById('qCategoryFilter')?.value || 'all';
   const filtered = quizQuestions.filter(q =>
-    !search ||
-    q.question?.toLowerCase().includes(search) ||
-    q.subtopic?.toLowerCase().includes(search) ||
-    CATEGORIES[q.theme]?.name?.toLowerCase().includes(search)
+    (categoryFilter === 'all' || normalizeQuestionCategory(q.olympiad || q.categoryId, q.courseId || selectedCourseId) === categoryFilter) &&
+    (
+      !search ||
+      q.question?.toLowerCase().includes(search) ||
+      q.subtopic?.toLowerCase().includes(search) ||
+      CATEGORIES[q.theme]?.name?.toLowerCase().includes(search) ||
+      getTestCategoryLabel(q.olympiad || q.categoryId, q.courseId || selectedCourseId).toLowerCase().includes(search)
+    )
   );
 
-  const olympiadLabels = { vsosh:'ВсОШ', vp_obsh:'ВП (Общество)', lomonosov:'Ломоносов', vp_soc:'ВП (Социология)', izumrud:'Изумруд' };
   if (countEl) countEl.textContent = `Найдено: ${filtered.length} из ${quizQuestions.length}`;
 
   if (!filtered.length) {
@@ -4551,7 +5204,7 @@ function renderAdminQuestionList() {
     <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px">
       <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
         <span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;background:var(--c4);color:var(--c1)">${CATEGORIES[q.theme]?.icon||''} ${CATEGORIES[q.theme]?.name||q.theme}</span>
-        <span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;background:#FFF3CD;color:var(--gold)">${olympiadLabels[q.olympiad]||q.olympiad} ${q.year||''}</span>
+        <span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;background:#FFF3CD;color:var(--gold)">${getTestCategoryLabel(q.olympiad, q.courseId || selectedCourseId)} ${q.year||''}</span>
         <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--c5);color:var(--text3)">${q.type==='single'?'Один':q.type==='multi'?'Несколько':'Сопоставление'}</span>
       </div>
       <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;line-height:1.4">${q.question?.slice(0,120)}${q.question?.length>120?'...':''}</div>
@@ -4570,7 +5223,7 @@ function openEditQModal(qid) {
 
   document.getElementById('editQTheme').value = q.theme || 'sociology';
   document.getElementById('editQSubtopic').value = q.subtopic || '';
-  document.getElementById('editQOlympiad').value = normalizeOlympiadValue(q.olympiad);
+  renderQuestionCategorySelect('editQOlympiad', q.olympiad || q.categoryId);
   document.getElementById('editQYear').value = q.year || '';
   document.getElementById('editQText').value = q.question || '';
   document.getElementById('editQExplanation').value = q.explanation || '';
@@ -4604,12 +5257,13 @@ function adminSaveQuestion() {
     ...q,
     theme:      document.getElementById('editQTheme').value,
     subtopic:   document.getElementById('editQSubtopic').value.trim(),
-    olympiad:   normalizeOlympiadValue(document.getElementById('editQOlympiad').value),
+    olympiad:   normalizeQuestionCategory(document.getElementById('editQOlympiad').value, selectedCourseId),
     year:       parseInt(document.getElementById('editQYear').value) || null,
     question:   document.getElementById('editQText').value.trim(),
     explanation:document.getElementById('editQExplanation').value.trim(),
     updatedAt:  Date.now(),
   };
+  updated.categoryId = updated.olympiad;
 
   if (q.type !== 'match') {
     updated.options = document.getElementById('editQOptions').value.trim().split('\n').filter(l=>l.trim());
