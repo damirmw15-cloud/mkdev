@@ -8,6 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Unbounded:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -322,6 +323,115 @@ body {
   padding: 16px;
   border: 1.5px solid #FFE4A0;
   box-shadow: 0 2px 12px rgba(245,166,35,0.1);
+}
+.admin-workspace-switch {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.admin-workspace-btn {
+  flex: 1;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  color: var(--text2);
+  padding: 10px 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.admin-workspace-btn.active {
+  background: linear-gradient(135deg, var(--c1), var(--c2));
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 6px 16px rgba(100,175,220,0.18);
+}
+.admin-user-preview-list,
+.admin-import-report-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.admin-user-preview-card,
+.admin-import-report-card,
+.admin-user-card {
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 2px 8px var(--shadow);
+}
+.admin-user-preview-top,
+.admin-user-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.admin-user-name {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--text);
+  line-height: 1.35;
+}
+.admin-user-email {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text2);
+  word-break: break-word;
+}
+.admin-helper-text {
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 700;
+  line-height: 1.45;
+}
+.admin-user-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.admin-user-actions button {
+  margin-top: 0;
+}
+.admin-report-badge {
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--c5);
+  color: var(--c1);
+}
+.admin-report-badge.error {
+  background: #FFF0F0;
+  color: #FF6B6B;
+}
+.admin-report-badge.warn {
+  background: #FFF8E6;
+  color: var(--gold);
+}
+.admin-course-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.admin-course-chip-list .admin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.admin-chip-btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
 }
 .admin-course-list {
   display: flex;
@@ -1810,6 +1920,49 @@ body {
       <button class="auth-btn-main" id="registerBtn" onclick="authRegister()">Создать аккаунт →</button>
     </div>
 
+    <!-- RESET PASSWORD FORM -->
+    <div id="authFormResetPassword" style="display:none">
+      <div class="auth-field">
+        <label>Email</label>
+        <input class="auth-input" type="email" id="resetEmail" placeholder="example@mail.ru" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label>Новый пароль</label>
+        <input class="auth-input" type="password" id="resetNewPassword" placeholder="Минимум 6 символов" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter')authConfirmPasswordReset()">
+      </div>
+      <button class="auth-btn-main" id="resetConfirmBtn" onclick="authConfirmPasswordReset()">Установить новый пароль →</button>
+      <div class="auth-forgot">
+        <button onclick="returnToLoginFromReset()">← Вернуться ко входу</button>
+      </div>
+    </div>
+
+    <!-- RESET LINK EXPIRED -->
+    <div id="authFormResetExpired" style="display:none">
+      <div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:6px">Ссылка устарела или уже использована</div>
+      <div class="auth-hint" style="margin-bottom:14px">
+        Запроси новую ссылку для установки пароля. Мы отправим её через стандартный Firebase flow.
+      </div>
+      <div class="auth-field">
+        <label>Email</label>
+        <input class="auth-input" type="email" id="resetExpiredEmail" placeholder="example@mail.ru" autocomplete="email"
+          onkeydown="if(event.key==='Enter')resendPasswordResetFromExpired()">
+      </div>
+      <button class="auth-btn-main" id="resetExpiredBtn" onclick="resendPasswordResetFromExpired()">Отправить новую ссылку</button>
+      <div class="auth-forgot">
+        <button onclick="returnToLoginFromReset()">← Вернуться ко входу</button>
+      </div>
+    </div>
+
+    <!-- RESET SUCCESS -->
+    <div id="authFormResetSuccess" style="display:none">
+      <div style="font-size:14px;font-weight:900;color:var(--text);margin-bottom:6px">Пароль обновлён</div>
+      <div class="auth-hint" style="margin-bottom:14px">
+        Теперь можно войти в приложение с новым паролем.
+      </div>
+      <button class="auth-btn-main" type="button" onclick="returnToLoginFromReset()">Перейти ко входу</button>
+    </div>
+
     <div class="auth-error" id="authError"></div>
     <div class="auth-hint">Прогресс сохраняется на всех устройствах<br>и в любом мессенджере 🌍</div>
   </div>
@@ -1931,6 +2084,10 @@ body {
   <div class="achievements-grid" id="achievementsGrid"></div>
   <div class="section-title">🎁 Мои награды</div>
   <div id="rewardsList"></div>
+  <div class="section-title">📝 История ответов</div>
+  <div id="quizHistoryList"></div>
+  <div class="section-title">🎯 Прогресс по темам</div>
+  <div id="themeProgressList"></div>
 </div>
 
 <!-- ══════════════════════════════════ CALENDAR TAB ══════════════════════════════════ -->
@@ -2111,6 +2268,13 @@ body {
       </div>
     </div>
   </div>
+
+  <div class="admin-workspace-switch">
+    <button class="admin-workspace-btn active" id="adminWorkspaceBtn_courses" type="button" onclick="setAdminWorkspaceMode('courses')">🎓 Курсы</button>
+    <button class="admin-workspace-btn" id="adminWorkspaceBtn_users" type="button" onclick="setAdminWorkspaceMode('users')">👥 Пользователи</button>
+  </div>
+
+  <div id="adminModeCourses">
 
   <div class="admin-section" id="adminSectionEventsAdd">
     <button class="admin-section-header" onclick="toggleAdminSection('adminSectionEventsAdd')">
@@ -2339,6 +2503,127 @@ body {
       <div id="adminQuestionList"></div>
     </div>
   </div>
+  </div>
+
+  <div id="adminModeUsers" style="display:none">
+    <div class="admin-section" id="adminSectionUsersImport">
+      <button class="admin-section-header" onclick="toggleAdminSection('adminSectionUsersImport')">
+        <div class="admin-section-title">📥 Импорт пользователей</div>
+        <span class="admin-section-arrow">▼</span>
+      </button>
+      <div class="admin-section-body">
+        <div class="admin-form-row">
+          <label class="admin-label">Файл Zenclass (.csv, .xls, .xlsx)</label>
+          <input type="file" class="admin-input" id="adminUserImportFile" accept=".csv,.xls,.xlsx" onchange="handleAdminUserImportFile(event)">
+        </div>
+        <div class="admin-inline-grid">
+          <div class="admin-form-row">
+            <label class="admin-label">Курс для импорта</label>
+            <select class="admin-select" id="adminUserImportCourse"></select>
+          </div>
+          <div class="admin-form-row">
+            <label class="admin-label">Строк в предпросмотре</label>
+            <input type="text" class="admin-input" id="adminUserImportMeta" value="Файл ещё не загружен" readonly>
+          </div>
+        </div>
+        <div class="admin-helper-text" style="margin-bottom:10px">
+          Система сама обновит найденных пользователей по email, создаст новых и отправит им ссылку Firebase для установки пароля.
+        </div>
+        <div id="adminUserImportPreview" class="admin-user-preview-list">
+          <div class="empty-state"><div class="e-icon">📄</div>Загрузи файл, чтобы увидеть предпросмотр</div>
+        </div>
+        <div class="admin-course-toolbar" style="margin-top:12px">
+          <button class="admin-btn blue" style="flex:2" onclick="runAdminUserImport()">🚀 Импортировать пользователей</button>
+          <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="resetAdminUserImport()">Сбросить</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section" id="adminSectionUsersManual">
+      <button class="admin-section-header" onclick="toggleAdminSection('adminSectionUsersManual')">
+        <div class="admin-section-title">➕ Добавить пользователя вручную</div>
+        <span class="admin-section-arrow">▼</span>
+      </button>
+      <div class="admin-section-body">
+        <div class="admin-inline-grid">
+          <div class="admin-form-row">
+            <label class="admin-label">Email</label>
+            <input type="email" class="admin-input" id="adminManualUserEmail" placeholder="student@example.com">
+          </div>
+          <div class="admin-form-row">
+            <label class="admin-label">Курс</label>
+            <select class="admin-select" id="adminManualUserCourse"></select>
+          </div>
+        </div>
+        <div class="admin-inline-grid">
+          <div class="admin-form-row">
+            <label class="admin-label">Имя</label>
+            <input type="text" class="admin-input" id="adminManualUserFirstName" placeholder="Анна">
+          </div>
+          <div class="admin-form-row">
+            <label class="admin-label">Фамилия</label>
+            <input type="text" class="admin-input" id="adminManualUserLastName" placeholder="Иванова">
+          </div>
+        </div>
+        <div class="admin-inline-grid">
+          <div class="admin-form-row">
+            <label class="admin-label">Отчество (необязательно)</label>
+            <input type="text" class="admin-input" id="adminManualUserMiddleName" placeholder="Сергеевна">
+          </div>
+          <div class="admin-form-row">
+            <label class="admin-label">Тариф (необязательно)</label>
+            <input type="text" class="admin-input" id="adminManualUserTariff" placeholder="Например: VIP">
+          </div>
+        </div>
+        <div class="admin-inline-grid">
+          <div class="admin-form-row">
+            <label class="admin-label">Доступ до (необязательно)</label>
+            <input type="date" class="admin-input" id="adminManualUserAccessUntil">
+          </div>
+          <div class="admin-form-row">
+            <label class="admin-label">Телефон (необязательно)</label>
+            <input type="text" class="admin-input" id="adminManualUserPhone" placeholder="+7 999 123-45-67">
+          </div>
+        </div>
+        <button class="admin-btn blue" onclick="adminCreateUserManually()">Создать и отправить приглашение</button>
+      </div>
+    </div>
+
+    <div class="admin-section" id="adminSectionUsersManage">
+      <button class="admin-section-header" onclick="toggleAdminSection('adminSectionUsersManage')">
+        <div class="admin-section-title">🔎 Поиск и корректировка пользователя</div>
+        <span class="admin-section-arrow">▼</span>
+      </button>
+      <div class="admin-section-body">
+        <div class="admin-inline-grid">
+          <div class="admin-form-row">
+            <label class="admin-label">Поиск по email</label>
+            <input type="email" class="admin-input" id="adminUserSearchEmail" placeholder="student@example.com" onkeydown="if(event.key==='Enter')adminSearchUser()">
+          </div>
+          <div class="admin-form-row" style="display:flex;align-items:flex-end">
+            <button class="admin-btn blue" onclick="adminSearchUser()">Найти пользователя</button>
+          </div>
+        </div>
+        <div id="adminUserSearchResult">
+          <div class="empty-state"><div class="e-icon">👤</div>Найди пользователя по email, чтобы изменить доступы и курс</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section" id="adminSectionUsersReport">
+      <button class="admin-section-header" onclick="toggleAdminSection('adminSectionUsersReport')">
+        <div class="admin-section-title">📊 Отчёт по импорту</div>
+        <span class="admin-section-arrow">▼</span>
+      </button>
+      <div class="admin-section-body">
+        <div id="adminUserImportSummary" class="admin-helper-text" style="margin-bottom:10px">Отчёта пока нет</div>
+        <div id="adminUserImportReport" class="admin-import-report-list">
+          <div class="empty-state"><div class="e-icon">🧾</div>После импорта здесь появится итог по строкам</div>
+        </div>
+        <button class="admin-btn blue" style="margin-top:10px" onclick="downloadAdminUserImportReport()">⬇️ Скачать отчёт</button>
+      </div>
+    </div>
+  </div>
 
   <div id="editQModal" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.5);overflow-y:auto;padding:20px">
     <div style="background:white;border-radius:20px;padding:20px;max-width:460px;margin:0 auto">
@@ -2452,13 +2737,13 @@ body {
   <!-- Theme filter (hidden by default) -->
   <div id="quizThemeFilter" style="display:none;margin-bottom:12px">
     <div class="quiz-filter-row">
-      <button class="quiz-filter-btn active" onclick="setQuizFilter('theme','all')">Все</button>
-      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','sociology')">👥 Социология</button>
-      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','politics')">🏛️ Политология</button>
-      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','economics')">💰 Экономика</button>
-      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','law')">⚖️ Право</button>
-      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','philosophy')">🧠 Философия</button>
-      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','culturology')">🎨 Культурология</button>
+      <button class="quiz-filter-btn active" onclick="setQuizFilter('theme','all', event)">Все</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','sociology', event)">👥 Социология</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','politics', event)">🏛️ Политология</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','economics', event)">💰 Экономика</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','law', event)">⚖️ Право</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','philosophy', event)">🧠 Философия</button>
+      <button class="quiz-filter-btn" onclick="setQuizFilter('theme','culturology', event)">🎨 Культурология</button>
     </div>
   </div>
 
@@ -2506,6 +2791,8 @@ const DEFAULT_COURSE_ID = 'course_default';
 const COURSE_META_PATH = 'courses';
 const COURSE_DATA_ROOT = 'course_data';
 const USER_SETTINGS_ROOT = 'users';
+const USER_EMAIL_INDEX_ROOT = 'user_email_index';
+const PENDING_USER_ENROLLMENTS_ROOT = 'pending_user_enrollments';
 const LEGACY_CACHE_KEY = 'mk_tracker_v2';
 const COURSE_CACHE_PREFIX = 'mk_tracker_v2::';
 const COURSE_PREFS_KEY = 'mk_selected_course';
@@ -2795,6 +3082,264 @@ function getUserSettingsPath(uid) {
   return `${USER_SETTINGS_ROOT}/${uid}`;
 }
 
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function normalizeEmailKey(email) {
+  return normalizeEmail(email).replace(/\./g, ',');
+}
+
+function getUserEmailIndexPath(email) {
+  return `${USER_EMAIL_INDEX_ROOT}/${normalizeEmailKey(email)}`;
+}
+
+function getPendingEnrollmentPath(email) {
+  return `${PENDING_USER_ENROLLMENTS_ROOT}/${normalizeEmailKey(email)}`;
+}
+
+function buildDisplayNameFromParts({ firstName = '', lastName = '', middleName = '' } = {}) {
+  return [lastName, firstName, middleName].map(v => String(v || '').trim()).filter(Boolean).join(' ').trim();
+}
+
+function splitFullName(fullName = '') {
+  const parts = String(fullName || '').trim().split(/\s+/).filter(Boolean);
+  return {
+    lastName: parts[0] || '',
+    firstName: parts[1] || '',
+    middleName: parts.slice(2).join(' '),
+  };
+}
+
+function normalizeImportHeaderKey(key) {
+  const translitMap = {
+    а:'a', б:'b', в:'v', г:'g', д:'d', е:'e', ё:'e', ж:'zh', з:'z', и:'i', й:'y',
+    к:'k', л:'l', м:'m', н:'n', о:'o', п:'p', р:'r', с:'s', т:'t', у:'u', ф:'f',
+    х:'h', ц:'ts', ч:'ch', ш:'sh', щ:'sch', ъ:'', ы:'y', ь:'', э:'e', ю:'yu', я:'ya'
+  };
+  return String(key || '')
+    .trim()
+    .toLowerCase()
+    .split('')
+    .map(ch => translitMap[ch] ?? ch)
+    .join('')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function pickImportField(raw, aliases) {
+  const entries = Object.entries(raw || {});
+  const normalizedAliases = aliases.map(normalizeImportHeaderKey);
+  const match = entries.find(([key]) => normalizedAliases.includes(normalizeImportHeaderKey(key)));
+  return match ? match[1] : '';
+}
+
+function normalizeImportedUserRow(raw = {}, rowIndex = 0) {
+  const email = normalizeEmail(pickImportField(raw, ['email', 'e-mail', 'почта', 'элпочта']));
+  let firstName = String(pickImportField(raw, ['имя', 'firstname', 'name']) || '').trim();
+  let lastName = String(pickImportField(raw, ['фамилия', 'lastname', 'surname']) || '').trim();
+  let middleName = String(pickImportField(raw, ['отчество', 'middlename', 'patronymic']) || '').trim();
+  const fullName = String(pickImportField(raw, ['фио', 'full_name', 'fullname']) || '').trim();
+  if ((!firstName || !lastName) && fullName) {
+    const split = splitFullName(fullName);
+    firstName = firstName || split.firstName;
+    lastName = lastName || split.lastName;
+    middleName = middleName || split.middleName;
+  }
+  return {
+    rowIndex: rowIndex + 1,
+    email,
+    firstName,
+    lastName,
+    middleName,
+    fullName: buildDisplayNameFromParts({ firstName, lastName, middleName }) || fullName || email,
+    phone: String(pickImportField(raw, ['телефон', 'phone', 'mobile']) || '').trim(),
+    registrationDate: String(pickImportField(raw, ['датарегистрации', 'registrationdate', 'createdat']) || '').trim(),
+    tariff: String(pickImportField(raw, ['тариф', 'tariff', 'plan']) || '').trim(),
+    accessUntil: String(pickImportField(raw, ['доступдо', 'accessuntil', 'paiduntil', 'validuntil']) || '').trim(),
+    raw,
+  };
+}
+
+function ensureLegacyCourseAccess(settings = {}, options = {}) {
+  const { forceDefaultCourse = false, skipDefaultCourse = false } = options;
+  const next = {
+    ...settings,
+    courses: { ...(settings.courses || {}) },
+    courseMeta: { ...(settings.courseMeta || {}) },
+  };
+  const activeCourseIds = Object.keys(next.courses).filter(courseId => next.courses[courseId]);
+  if (forceDefaultCourse || (!skipDefaultCourse && !activeCourseIds.length)) {
+    next.courses[DEFAULT_COURSE_ID] = true;
+  }
+  const resolvedCourseIds = Object.keys(next.courses).filter(courseId => next.courses[courseId]);
+  if (!next.selectedCourseId) next.selectedCourseId = resolvedCourseIds[0] || DEFAULT_COURSE_ID;
+  if (!next.currentCourseId) next.currentCourseId = next.selectedCourseId || resolvedCourseIds[0] || DEFAULT_COURSE_ID;
+  return next;
+}
+
+function buildCourseMetaInput(meta = {}, source = 'admin') {
+  const next = { ...(meta || {}) };
+  if (next.tariff === '') delete next.tariff;
+  if (next.accessUntil === '') delete next.accessUntil;
+  if (next.phone === '') delete next.phone;
+  if (next.registrationDate === '') delete next.registrationDate;
+  next.updatedAt = Date.now();
+  next.source = source;
+  return next;
+}
+
+function assignCourseToUserSettings(settings = {}, courseId, meta = {}, options = {}) {
+  const next = ensureLegacyCourseAccess(settings, { skipDefaultCourse: true });
+  next.courses = { ...(next.courses || {}), [courseId]: true };
+  next.courseMeta = { ...(next.courseMeta || {}), [courseId]: buildCourseMetaInput({ ...(next.courseMeta?.[courseId] || {}), ...(meta || {}) }, options.source) };
+  if (options.setAsCurrent || !next.selectedCourseId || !next.courses[next.selectedCourseId]) next.selectedCourseId = courseId;
+  if (options.setAsCurrent || !next.currentCourseId || !next.courses[next.currentCourseId]) next.currentCourseId = next.selectedCourseId;
+  return next;
+}
+
+function mergeUserIdentityIntoSettings(settings = {}, row = {}, fallback = {}) {
+  const existing = { ...settings };
+  const firstName = row.firstName || existing.firstName || fallback.firstName || '';
+  const lastName = row.lastName || existing.lastName || fallback.lastName || '';
+  const middleName = row.middleName || existing.middleName || fallback.middleName || '';
+  const fullName = buildDisplayNameFromParts({ firstName, lastName, middleName }) || existing.fullName || fallback.fullName || '';
+  return {
+    ...existing,
+    firstName,
+    lastName,
+    middleName,
+    fullName,
+    name: fullName || existing.name || fallback.name || '',
+    email: normalizeEmail(row.email || existing.email || fallback.email || ''),
+    emailKey: normalizeEmailKey(row.email || existing.email || fallback.email || ''),
+    updatedAt: Date.now(),
+  };
+}
+
+async function findUserRecordByEmail(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail || !db) return null;
+  const emailKey = normalizeEmailKey(normalizedEmail);
+
+  const indexSnap = await db.ref(getUserEmailIndexPath(normalizedEmail)).once('value');
+  const indexedUid = indexSnap.val();
+  if (indexedUid) {
+    const settingsSnap = await db.ref(getUserSettingsPath(indexedUid)).once('value');
+    return { uid: indexedUid, settings: settingsSnap.val() || {}, source: 'index' };
+  }
+
+  const keyedSnap = await db.ref(USER_SETTINGS_ROOT).orderByChild('emailKey').equalTo(emailKey).limitToFirst(1).once('value');
+  if (keyedSnap.exists()) {
+    const [uid, settings] = Object.entries(keyedSnap.val())[0];
+    return { uid, settings: settings || {}, source: 'emailKey' };
+  }
+
+  const emailSnap = await db.ref(USER_SETTINGS_ROOT).orderByChild('email').equalTo(normalizedEmail).limitToFirst(1).once('value');
+  if (emailSnap.exists()) {
+    const [uid, settings] = Object.entries(emailSnap.val())[0];
+    return { uid, settings: settings || {}, source: 'email' };
+  }
+
+  const pendingSnap = await db.ref(getPendingEnrollmentPath(normalizedEmail)).once('value');
+  if (pendingSnap.exists()) {
+    return { uid: null, settings: pendingSnap.val() || {}, source: 'pending', pending: true };
+  }
+
+  return null;
+}
+
+async function persistUserSettings(uid, settings) {
+  const payload = ensureLegacyCourseAccess(settings, { skipDefaultCourse: true });
+  await Promise.all([
+    db.ref(getUserSettingsPath(uid)).update(payload),
+    db.ref(getUserEmailIndexPath(payload.email)).set(uid),
+    db.ref(getPendingEnrollmentPath(payload.email)).remove(),
+  ]);
+  return payload;
+}
+
+async function storePendingEnrollment(email, settings) {
+  const payload = ensureLegacyCourseAccess(settings, { skipDefaultCourse: true });
+  payload.pending = true;
+  payload.email = normalizeEmail(email);
+  payload.emailKey = normalizeEmailKey(email);
+  payload.updatedAt = Date.now();
+  if (!payload.createdAt) payload.createdAt = Date.now();
+  await db.ref(getPendingEnrollmentPath(email)).set(payload);
+  return payload;
+}
+
+async function sendPasswordSetupEmail(email) {
+  if (!auth) throw new Error('Firebase Auth не инициализирован');
+  await auth.sendPasswordResetEmail(normalizeEmail(email));
+  return true;
+}
+
+function generateTempPassword() {
+  if (globalThis.crypto?.randomUUID) return `${globalThis.crypto.randomUUID()}Aa!1`;
+  return `Temp_${Math.random().toString(36).slice(2)}Aa!1`;
+}
+
+async function createFirebaseAuthUser(email) {
+  const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE_CONFIG.apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email: normalizeEmail(email),
+      password: generateTempPassword(),
+      returnSecureToken: false,
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    const message = data?.error?.message || 'UNKNOWN';
+    throw new Error(message);
+  }
+  return data.localId;
+}
+
+async function ensureCurrentUserSettings(user) {
+  if (!db || !user) return {};
+  const normalizedEmail = normalizeEmail(user.email);
+  const emailKey = normalizeEmailKey(normalizedEmail);
+  const settingsSnap = await db.ref(getUserSettingsPath(user.uid)).once('value');
+  const pendingSnap = await db.ref(getPendingEnrollmentPath(normalizedEmail)).once('value');
+  let settings = settingsSnap.val() || {};
+  settings = mergeUserIdentityIntoSettings(settings, {}, {
+    email: normalizedEmail,
+    fullName: user.displayName || '',
+    name: user.displayName || '',
+    ...splitFullName(user.displayName || ''),
+  });
+  settings = ensureLegacyCourseAccess(settings, { forceDefaultCourse: true });
+  if (pendingSnap.exists()) {
+    const pending = pendingSnap.val() || {};
+    Object.keys(pending.courses || {}).forEach(courseId => {
+      settings = assignCourseToUserSettings(settings, courseId, pending.courseMeta?.[courseId] || {}, {
+        setAsCurrent: pending.selectedCourseId === courseId || pending.currentCourseId === courseId,
+        source: pending.courseMeta?.[courseId]?.source || 'pending',
+      });
+    });
+    if (pending.selectedCourseId) settings.selectedCourseId = pending.selectedCourseId;
+    if (pending.currentCourseId) settings.currentCourseId = pending.currentCourseId;
+    settings = mergeUserIdentityIntoSettings(settings, pending, settings);
+    await db.ref(getPendingEnrollmentPath(normalizedEmail)).remove();
+  }
+  settings.lastLoginAt = Date.now();
+  settings.email = normalizedEmail;
+  settings.emailKey = emailKey;
+  if (!settings.createdAt) settings.createdAt = Date.now();
+  if (settings.fullName && !user.displayName && typeof user.updateProfile === 'function') {
+    try {
+      await user.updateProfile({ displayName: settings.fullName });
+    } catch (error) {
+      console.warn('Unable to backfill displayName', error);
+    }
+  }
+  await persistUserSettings(user.uid, settings);
+  return settings;
+}
+
 function renderCourseControls() {
   const btn = document.getElementById('courseSwitcherBtn');
   const label = document.getElementById('courseSwitcherLabel');
@@ -2972,7 +3517,9 @@ function updateCourseDependentViews() {
   renderQuizStats();
   renderWeakThemes();
   if (document.getElementById('tab-admin').classList.contains('active')) {
+    renderAdminWorkspaceMode();
     renderAdminCourseManager();
+    renderAdminUsersModule();
     renderAdminEvents();
     adminLoadStudents();
     adminLoadQuizStats();
@@ -3080,6 +3627,7 @@ async function switchCourse(courseId, options = {}) {
   quizResults = {};
   currentQuestion = null;
   quizAnswered = false;
+  quizThemeFilter = 'all';
   quizOlympiadFilter = 'all';
 
   renderCourseControls();
@@ -3608,6 +4156,10 @@ function renderProgress() {
     </div>`;
   }).join('');
 
+  renderQuizHistory();
+
+  renderThemeProgress();
+
   document.getElementById('achievementsGrid').innerHTML = ACHIEVEMENTS.map(a => {
     const unlocked = !!state.unlockedAchievements[a.id];
     const done = getDoneCount();
@@ -3633,6 +4185,89 @@ function renderProgress() {
       ` : unlocked ? '<div class="badge-prog" style="color:var(--success)">✅ Получено!</div>' : ''}
     </div>`;
   }).join('');
+}
+
+function renderQuizHistory() {
+  const el = document.getElementById('quizHistoryList');
+  if (!el) return;
+  const entries = Object.values(quizResults);
+  if (!entries.length) {
+    el.innerHTML = '<div class="empty-state"><div class="e-icon">📭</div>Ещё нет ответов</div>';
+    return;
+  }
+  const byTheme = {};
+  entries.forEach(r => {
+    const theme = r.theme || 'Без темы';
+    if (!byTheme[theme]) byTheme[theme] = { correct: 0, attempts: 0, lastAt: 0 };
+    byTheme[theme].correct  += r.correct  || 0;
+    byTheme[theme].attempts += r.attempts || 0;
+    byTheme[theme].lastAt    = Math.max(byTheme[theme].lastAt, r.lastAt || 0);
+  });
+  const sorted = Object.entries(byTheme)
+    .sort((a, b) => b[1].attempts - a[1].attempts)
+    .slice(0, 10);
+  el.innerHTML = sorted.map(([theme, s]) => {
+    const pct = s.attempts ? Math.round(s.correct / s.attempts * 100) : 0;
+    const color = pct >= 80 ? 'var(--success)' : pct >= 50 ? 'var(--gold)' : '#E05252';
+    const date = s.lastAt ? new Date(s.lastAt).toLocaleDateString('ru-RU', { day:'numeric', month:'short' }) : '';
+    return `<div class="cat-progress-card">
+      <div class="cat-progress-header">
+        <div class="cat-progress-name">${theme}</div>
+        <div class="cat-progress-pct" style="color:${color}">${pct}%</div>
+      </div>
+      <div class="cat-bar"><div class="cat-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+      <div class="cat-stats">${s.correct} из ${s.attempts} верно${date ? ` · ${date}` : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderThemeProgress() {
+  const el = document.getElementById('themeProgressList');
+  if (!el) return;
+  const themeStats = {};
+  Object.values(quizResults).forEach(r => {
+    const key = r.subtopic || r.theme || 'Другое';
+    if (!themeStats[key]) themeStats[key] = { correct: 0, total: 0 };
+    themeStats[key].correct += r.correct || 0;
+    themeStats[key].total  += r.attempts || 0;
+  });
+  const themes = Object.entries(themeStats)
+    .filter(([, s]) => s.total >= 1)
+    .map(([subtopic, s]) => ({ subtopic, correct: s.correct, total: s.total, pct: Math.round(s.correct/s.total*100) }))
+    .sort((a, b) => b.total - a.total);
+  if (!themes.length) {
+    el.innerHTML = '<div class="empty-state"><div class="e-icon">📚</div>Начни отвечать на вопросы</div>';
+    return;
+  }
+  const good = themes.filter(t => t.pct >= 80);
+  const ok = themes.filter(t => t.pct >= 50 && t.pct < 80);
+  const weak = themes.filter(t => t.pct < 50);
+  const html = [];
+  if (weak.length) {
+    html.push(`<div style="font-size:11px;color:var(--text3);font-weight:800;margin-bottom:6px;margin-top:12px">🔴 СЛАБЫЕ (< 50%)</div>`);
+    html.push(...weak.map(t => renderThemeCard(t)));
+  }
+  if (ok.length) {
+    html.push(`<div style="font-size:11px;color:var(--text3);font-weight:800;margin-bottom:6px;margin-top:12px">🟡 НОРМАЛЬНО (50-80%)</div>`);
+    html.push(...ok.map(t => renderThemeCard(t)));
+  }
+  if (good.length) {
+    html.push(`<div style="font-size:11px;color:var(--text3);font-weight:800;margin-bottom:6px;margin-top:12px">🟢 ОСВОЕНО (≥ 80%)</div>`);
+    html.push(...good.map(t => renderThemeCard(t)));
+  }
+  el.innerHTML = html.join('');
+}
+
+function renderThemeCard(t) {
+  const color = t.pct >= 80 ? 'var(--success)' : t.pct >= 50 ? 'var(--gold)' : '#E05252';
+  return `<div class="cat-progress-card">
+    <div class="cat-progress-header">
+      <div class="cat-progress-name">${t.subtopic}</div>
+      <div class="cat-progress-pct" style="color:${color}">${t.pct}%</div>
+    </div>
+    <div class="cat-bar"><div class="cat-bar-fill" style="width:${t.pct}%;background:${color}"></div></div>
+    <div class="cat-stats">${t.correct} из ${t.total} верно</div>
+  </div>`;
 }
 
 function renderRewards() {
@@ -3682,7 +4317,7 @@ function switchTab(tab) {
   const idx = tabs.indexOf(tab);
   document.querySelectorAll('.nav-tab')[idx]?.classList.add('active');
   if (tab === 'calendar') renderCalendar();
-  if (tab === 'admin') { renderAdminCourseManager(); renderAdminEvents(); adminLoadStudents(); adminLoadQuizStats(); renderAdminQuestionList(); renderTaskEditorWeekOptions(); renderTaskEditorList(); }
+  if (tab === 'admin') { renderAdminWorkspaceMode(); renderAdminCourseManager(); renderAdminUsersModule(); renderAdminEvents(); adminLoadStudents(); adminLoadQuizStats(); renderAdminQuestionList(); renderTaskEditorWeekOptions(); renderTaskEditorList(); }
   if (tab === 'quiz') { renderQuizStats(); if (quizMode === 'weak') renderWeakThemes(); }
   if (tab !== 'tasks') renderAll();
 }
@@ -3741,16 +4376,121 @@ let progressSaveInterval = null;
 let firebaseTasks = [];
 let taskEditorEditingId = null;
 let adminCourseEditingId = null;
+let adminWorkspaceMode = 'courses';
+let adminUserImportRows = [];
+let adminUserImportReport = [];
+let adminSelectedUser = null;
+let adminUserImportFileName = '';
+const ENABLE_PUBLIC_REGISTRATION = false;
+let authScreenMode = 'login';
+let pendingResetCode = '';
+let pendingResetEmail = '';
 
 // ═══════════════════════════════════════════════════
 //  AUTH SCREEN
 // ═══════════════════════════════════════════════════
+function setAuthScreenMode(mode = 'login') {
+  authScreenMode = mode;
+  const tabs = document.querySelector('.auth-tabs');
+  const loginForm = document.getElementById('authFormLogin');
+  const regForm = document.getElementById('authFormReg');
+  const resetForm = document.getElementById('authFormResetPassword');
+  const expiredForm = document.getElementById('authFormResetExpired');
+  const successForm = document.getElementById('authFormResetSuccess');
+  const loginTab = document.getElementById('authTabLogin');
+  const regTab = document.getElementById('authTabReg');
+  if (tabs) tabs.style.display = !ENABLE_PUBLIC_REGISTRATION ? 'none' : (mode === 'login' ? '' : 'none');
+  if (loginForm) loginForm.style.display = mode === 'login' ? '' : 'none';
+  if (regForm) regForm.style.display = mode === 'register' ? '' : 'none';
+  if (resetForm) resetForm.style.display = mode === 'reset-valid' ? '' : 'none';
+  if (expiredForm) expiredForm.style.display = mode === 'reset-expired' ? '' : 'none';
+  if (successForm) successForm.style.display = mode === 'reset-success' ? '' : 'none';
+  if (loginTab) loginTab.classList.toggle('active', mode === 'login');
+  if (regTab) regTab.classList.toggle('active', ENABLE_PUBLIC_REGISTRATION && mode === 'register');
+  setAuthError('');
+}
+
 function switchAuthTab(tab) {
-  document.getElementById('authFormLogin').style.display = tab === 'login' ? '' : 'none';
-  document.getElementById('authFormReg').style.display  = tab === 'register' ? '' : 'none';
-  document.getElementById('authTabLogin').classList.toggle('active', tab === 'login');
-  document.getElementById('authTabReg').classList.toggle('active', tab === 'register');
+  const resolvedTab = ENABLE_PUBLIC_REGISTRATION && tab === 'register' ? 'register' : 'login';
+  if (resolvedTab !== 'login') {
+    setAuthScreenMode(resolvedTab);
+    return;
+  }
+  setAuthScreenMode('login');
+  const loginForm = document.getElementById('authFormLogin');
+  const regForm = document.getElementById('authFormReg');
+  const loginTab = document.getElementById('authTabLogin');
+  const regTab = document.getElementById('authTabReg');
+  if (loginForm) loginForm.style.display = resolvedTab === 'login' ? '' : 'none';
+  if (regForm) regForm.style.display  = ENABLE_PUBLIC_REGISTRATION && resolvedTab === 'register' ? '' : 'none';
+  if (loginTab) loginTab.classList.toggle('active', resolvedTab === 'login');
+  if (regTab) regTab.classList.toggle('active', ENABLE_PUBLIC_REGISTRATION && resolvedTab === 'register');
   document.getElementById('authError').textContent = '';
+}
+
+function applyPublicRegistrationVisibility() {
+  const tabs = document.querySelector('.auth-tabs');
+  const regTab = document.getElementById('authTabReg');
+  const regForm = document.getElementById('authFormReg');
+  if (tabs) tabs.style.display = ENABLE_PUBLIC_REGISTRATION ? '' : 'none';
+  if (regTab) regTab.style.display = ENABLE_PUBLIC_REGISTRATION ? '' : 'none';
+  if (regForm && !ENABLE_PUBLIC_REGISTRATION) regForm.style.display = 'none';
+  switchAuthTab('login');
+}
+
+function getPasswordResetEmailCandidate() {
+  return (
+    pendingResetEmail ||
+    document.getElementById('resetExpiredEmail')?.value.trim() ||
+    document.getElementById('resetEmail')?.value.trim() ||
+    document.getElementById('loginEmail')?.value.trim() ||
+    ''
+  );
+}
+
+function returnToLoginFromReset() {
+  pendingResetCode = '';
+  const params = new URLSearchParams(window.location.search);
+  params.delete('mode');
+  params.delete('oobCode');
+  params.delete('apiKey');
+  params.delete('lang');
+  const nextQuery = params.toString();
+  window.history.replaceState({}, '', `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}`);
+  switchAuthTab('login');
+  if (pendingResetEmail) {
+    const loginEmail = document.getElementById('loginEmail');
+    if (loginEmail) loginEmail.value = pendingResetEmail;
+  }
+}
+
+async function handlePasswordResetLink() {
+  const params = new URLSearchParams(window.location.search);
+  const mode = params.get('mode');
+  const oobCode = params.get('oobCode');
+  if (mode !== 'resetPassword' || !oobCode || !auth) {
+    applyPublicRegistrationVisibility();
+    return;
+  }
+  pendingResetCode = oobCode;
+  try {
+    const email = await auth.verifyPasswordResetCode(oobCode);
+    pendingResetEmail = email || '';
+    const resetEmail = document.getElementById('resetEmail');
+    const expiredEmail = document.getElementById('resetExpiredEmail');
+    if (resetEmail) resetEmail.value = pendingResetEmail;
+    if (expiredEmail) expiredEmail.value = pendingResetEmail;
+    setAuthScreenMode('reset-valid');
+  } catch (error) {
+    pendingResetCode = '';
+    pendingResetEmail = '';
+    const resetEmail = document.getElementById('resetEmail');
+    const expiredEmail = document.getElementById('resetExpiredEmail');
+    if (resetEmail) resetEmail.value = '';
+    if (expiredEmail) expiredEmail.value = document.getElementById('loginEmail')?.value.trim() || '';
+    setAuthScreenMode('reset-expired');
+    setAuthError('Ссылка устарела или уже использована. Запроси новую ссылку ниже.');
+  }
 }
 
 function setAuthError(msg) {
@@ -3759,8 +4499,15 @@ function setAuthError(msg) {
 
 function setAuthLoading(id, loading) {
   const btn = document.getElementById(id);
+  if (!btn) return;
   btn.disabled = loading;
-  btn.textContent = loading ? 'Подождите...' : (id === 'loginBtn' ? 'Войти →' : 'Создать аккаунт →');
+  const labels = {
+    loginBtn: 'Войти →',
+    registerBtn: 'Создать аккаунт →',
+    resetConfirmBtn: 'Установить новый пароль →',
+    resetExpiredBtn: 'Отправить новую ссылку',
+  };
+  btn.textContent = loading ? 'Подождите...' : (labels[id] || btn.textContent);
 }
 
 function authLogin() {
@@ -3776,7 +4523,7 @@ function authLogin() {
       setAuthLoading('loginBtn', false);
       console.error('Auth error:', e.code, e.message);
       const msgs = {
-        'auth/user-not-found': 'Аккаунт не найден. Зарегистрируйся!',
+        'auth/user-not-found': 'Аккаунт не найден. Проверь email или восстанови доступ через администратора.',
         'auth/wrong-password': 'Неверный пароль',
         'auth/invalid-email': 'Неверный формат email',
         'auth/too-many-requests': 'Слишком много попыток. Подожди немного',
@@ -3789,6 +4536,11 @@ function authLogin() {
 }
 
 function authRegister() {
+  if (!ENABLE_PUBLIC_REGISTRATION) {
+    switchAuthTab('login');
+    setAuthError('Регистрация временно закрыта. Используй вход или сброс пароля.');
+    return;
+  }
   const name  = document.getElementById('regName').value.trim();
   const email = document.getElementById('regEmail').value.trim();
   const pass  = document.getElementById('regPassword').value;
@@ -3814,6 +4566,55 @@ function authResetPassword() {
   auth.sendPasswordResetEmail(email)
     .then(() => setAuthError('✅ Письмо отправлено! Проверь почту'))
     .catch(() => setAuthError('Ошибка. Проверь правильность email'));
+}
+
+async function authConfirmPasswordReset() {
+  const newPassword = document.getElementById('resetNewPassword')?.value || '';
+  if (!pendingResetCode) {
+    setAuthScreenMode('reset-expired');
+    setAuthError('Ссылка устарела. Запроси новую ссылку.');
+    return;
+  }
+  if (newPassword.length < 6) {
+    setAuthError('Пароль минимум 6 символов');
+    return;
+  }
+  setAuthLoading('resetConfirmBtn', true);
+  try {
+    await auth.confirmPasswordReset(pendingResetCode, newPassword);
+    pendingResetCode = '';
+    setAuthScreenMode('reset-success');
+  } catch (error) {
+    const code = String(error?.code || error?.message || '');
+    if (code.includes('expired-action-code') || code.includes('invalid-action-code')) {
+      setAuthScreenMode('reset-expired');
+      setAuthError('Ссылка устарела или уже использована. Запроси новую ссылку.');
+    } else if (code.includes('weak-password')) {
+      setAuthError('Пароль слишком простой');
+    } else {
+      setAuthError('Не удалось обновить пароль. Попробуй снова.');
+    }
+  } finally {
+    setAuthLoading('resetConfirmBtn', false);
+  }
+}
+
+async function resendPasswordResetFromExpired() {
+  const email = getPasswordResetEmailCandidate();
+  if (!email) {
+    setAuthError('Введи email, чтобы отправить новую ссылку');
+    return;
+  }
+  setAuthLoading('resetExpiredBtn', true);
+  try {
+    await auth.sendPasswordResetEmail(email);
+    pendingResetEmail = email;
+    setAuthError('✅ Новая ссылка отправлена. Проверь почту.');
+  } catch (error) {
+    setAuthError('Не удалось отправить письмо. Проверь email и попробуй снова.');
+  } finally {
+    setAuthLoading('resetExpiredBtn', false);
+  }
 }
 
 function authLogout() {
@@ -3861,6 +4662,7 @@ function closeAccountMenu() {
 
 function showAuthScreen() {
   document.getElementById('authScreen').style.display = 'flex';
+  handlePasswordResetLink();
 }
 
 function hideAuthScreen() {
@@ -3877,8 +4679,7 @@ function onUserLoggedIn(user) {
   progressSaveInterval = setInterval(() => saveProgressToFirebase(), 30000);
   updateHeaderUser(user);
   courseCatalogReady.then(async () => {
-    const settingsSnap = await db.ref(getUserSettingsPath(user.uid)).once('value');
-    const settings = settingsSnap.val() || {};
+    const settings = await ensureCurrentUserSettings(user);
     availableCourses = getAvailableCoursesForUser(settings);
     const preferredCourseId =
       settings.selectedCourseId ||
@@ -4196,14 +4997,16 @@ function renderCalendarEvents(filterDate) {
     const mon = months[d.getMonth()];
     const meta = getEventTypeMeta(ev.type);
     const typeClass = normalizeEventType(ev.type);
+    const safeTitle = escapeHtml(ev.title || '');
+    const safeDesc = escapeHtml(ev.desc || '');
     return `<div class="event-card ${typeClass}">
       <div class="event-date-badge">
         <div class="event-date-day">${day}</div>
         <div class="event-date-mon">${mon}</div>
       </div>
       <div class="event-body">
-        <div class="event-title">${ev.title}</div>
-        ${ev.desc ? `<div class="event-desc">${ev.desc}</div>` : ''}
+        <div class="event-title">${safeTitle}</div>
+        ${ev.desc ? `<div class="event-desc">${safeDesc}</div>` : ''}
       </div>
       <div class="event-type-badge ${typeClass}">${meta.icon} ${meta.label}</div>
     </div>`;
@@ -4477,6 +5280,7 @@ async function adminToggleCourseActive(courseId) {
   courseCatalog[courseId] = normalizeCourse(courseId, { ...course, active: nextActive, updatedAt: Date.now() });
   availableCourses = getAvailableCoursesForUser({});
   renderAdminCourseManager();
+  renderAdminUsersModule();
   showToast(nextActive ? '✅ Курс снова активен' : '🙈 Курс скрыт для учеников');
 }
 
@@ -4529,7 +5333,471 @@ async function adminSaveCourse() {
   } else {
     renderAdminCourseManager();
   }
+  renderAdminUsersModule();
   adminCourseReset();
+}
+
+function renderAdminCourseOptionsHtml(selectedValue = '', options = {}) {
+  const { includeBlank = false, blankLabel = 'Выбери курс', includeAll = true } = options;
+  const courses = includeAll ? getSortedCourses() : getSortedCourses().filter(course => course.active !== false);
+  const blank = includeBlank ? `<option value="">${blankLabel}</option>` : '';
+  return blank + courses.map(course => `
+    <option value="${course.id}" ${selectedValue === course.id ? 'selected' : ''}>
+      ${escapeHtml(course.name)}
+    </option>
+  `).join('');
+}
+
+function syncAdminUserCourseSelects() {
+  const selects = [
+    { id: 'adminUserImportCourse', value: document.getElementById('adminUserImportCourse')?.value || selectedCourseId, includeBlank: false },
+    { id: 'adminManualUserCourse', value: document.getElementById('adminManualUserCourse')?.value || selectedCourseId, includeBlank: false },
+    { id: 'adminUserCardCurrentCourse', value: adminSelectedUser?.settings?.selectedCourseId || selectedCourseId, includeBlank: false },
+    { id: 'adminUserCardAddCourse', value: '', includeBlank: true, blankLabel: 'Добавить доступ к курсу' },
+  ];
+  selects.forEach(item => {
+    const el = document.getElementById(item.id);
+    if (!el) return;
+    el.innerHTML = renderAdminCourseOptionsHtml(item.value, {
+      includeBlank: item.includeBlank,
+      blankLabel: item.blankLabel,
+    });
+    if (item.value && Array.from(el.options).some(option => option.value === item.value)) el.value = item.value;
+  });
+}
+
+function setAdminWorkspaceMode(mode) {
+  adminWorkspaceMode = mode === 'users' ? 'users' : 'courses';
+  renderAdminWorkspaceMode();
+}
+
+function renderAdminWorkspaceMode() {
+  const coursesWrap = document.getElementById('adminModeCourses');
+  const usersWrap = document.getElementById('adminModeUsers');
+  const coursesBtn = document.getElementById('adminWorkspaceBtn_courses');
+  const usersBtn = document.getElementById('adminWorkspaceBtn_users');
+  if (coursesWrap) coursesWrap.style.display = adminWorkspaceMode === 'courses' ? '' : 'none';
+  if (usersWrap) usersWrap.style.display = adminWorkspaceMode === 'users' ? '' : 'none';
+  if (coursesBtn) coursesBtn.classList.toggle('active', adminWorkspaceMode === 'courses');
+  if (usersBtn) usersBtn.classList.toggle('active', adminWorkspaceMode === 'users');
+  syncAdminUserCourseSelects();
+  if (adminWorkspaceMode === 'users') renderAdminUsersModule();
+}
+
+function renderAdminUserImportPreview() {
+  const metaEl = document.getElementById('adminUserImportMeta');
+  const previewEl = document.getElementById('adminUserImportPreview');
+  if (!previewEl || !metaEl) return;
+  if (!adminUserImportRows.length) {
+    metaEl.value = 'Файл ещё не загружен';
+    previewEl.innerHTML = '<div class="empty-state"><div class="e-icon">📄</div>Загрузи файл, чтобы увидеть предпросмотр</div>';
+    return;
+  }
+  const validCount = adminUserImportRows.filter(row => row.email).length;
+  metaEl.value = `${adminUserImportFileName || 'Файл'} · ${adminUserImportRows.length} строк`;
+  previewEl.innerHTML = adminUserImportRows.slice(0, 12).map(row => `
+    <div class="admin-user-preview-card">
+      <div class="admin-user-preview-top">
+        <div style="min-width:0">
+          <div class="admin-user-name">${escapeHtml(row.fullName || 'Без имени')}</div>
+          <div class="admin-user-email">${escapeHtml(row.email || 'Email не найден')}</div>
+        </div>
+        <div class="admin-chip">${row.email ? 'Готово к импорту' : 'Будет пропущен'}</div>
+      </div>
+      <div class="admin-helper-text">
+        строка ${row.rowIndex}${row.tariff ? ` · тариф: ${escapeHtml(row.tariff)}` : ''}${row.accessUntil ? ` · доступ до: ${escapeHtml(row.accessUntil)}` : ''}
+      </div>
+    </div>
+  `).join('') + (adminUserImportRows.length > 12 ? `<div class="admin-helper-text">Показаны первые 12 строк. К импорту готово: ${validCount}.</div>` : '');
+}
+
+function resetAdminUserImport() {
+  adminUserImportRows = [];
+  adminUserImportFileName = '';
+  const fileInput = document.getElementById('adminUserImportFile');
+  if (fileInput) fileInput.value = '';
+  renderAdminUserImportPreview();
+}
+
+async function handleAdminUserImportFile(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) return;
+  if (!window.XLSX) {
+    showToast('⚠️ Библиотека импорта не загрузилась');
+    return;
+  }
+  try {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false });
+    adminUserImportRows = rows.map((row, index) => normalizeImportedUserRow(row, index));
+    adminUserImportFileName = file.name;
+    renderAdminUserImportPreview();
+    showToast(`📄 Файл загружен: ${adminUserImportRows.length} строк`);
+  } catch (error) {
+    console.error('Import parse error', error);
+    showToast('❌ Не удалось прочитать файл');
+  }
+}
+
+function renderAdminImportReport() {
+  const summaryEl = document.getElementById('adminUserImportSummary');
+  const reportEl = document.getElementById('adminUserImportReport');
+  if (!summaryEl || !reportEl) return;
+  if (!adminUserImportReport.length) {
+    summaryEl.textContent = 'Отчёта пока нет';
+    reportEl.innerHTML = '<div class="empty-state"><div class="e-icon">🧾</div>После импорта здесь появится итог по строкам</div>';
+    return;
+  }
+  const stats = adminUserImportReport.reduce((acc, item) => {
+    if (item.action.startsWith('создан')) acc.created += 1;
+    else if (item.action.startsWith('обновл')) acc.updated += 1;
+    else if (item.action.startsWith('пропущ')) acc.skipped += 1;
+    else if (item.action.startsWith('ошибка')) acc.errors += 1;
+    return acc;
+  }, { created: 0, updated: 0, skipped: 0, errors: 0 });
+  summaryEl.textContent = `Создано: ${stats.created} · Обновлено: ${stats.updated} · Пропущено: ${stats.skipped} · Ошибок: ${stats.errors}`;
+  reportEl.innerHTML = adminUserImportReport.map(item => `
+    <div class="admin-import-report-card">
+      <div class="admin-user-card-top">
+        <div style="min-width:0">
+          <div class="admin-user-name">${escapeHtml(item.fullName || '—')}</div>
+          <div class="admin-user-email">${escapeHtml(item.email || '—')}</div>
+        </div>
+        <div class="admin-report-badge ${item.action.startsWith('ошибка') ? 'error' : item.action.startsWith('пропущ') ? 'warn' : ''}">${escapeHtml(item.action)}</div>
+      </div>
+      <div class="admin-helper-text">Курс: ${escapeHtml(getCourseById(item.courseId).name || item.courseId || '—')}</div>
+      ${item.note ? `<div class="admin-helper-text" style="margin-top:4px">${escapeHtml(item.note)}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function downloadAdminUserImportReport() {
+  if (!adminUserImportReport.length) {
+    showToast('ℹ️ Отчёт пока пуст');
+    return;
+  }
+  const rows = [
+    ['email', 'fio', 'courseId', 'result', 'note'],
+    ...adminUserImportReport.map(item => [item.email || '', item.fullName || '', item.courseId || '', item.action || '', item.note || '']),
+  ];
+  const csv = rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(';')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `mk-users-import-report-${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+async function upsertUserFromAdminRow(row, options = {}) {
+  const email = normalizeEmail(row.email);
+  const courseId = options.courseId || selectedCourseId;
+  if (!email) {
+    return { email: row.email || '', fullName: row.fullName || '', courseId, action: 'пропущен', note: 'Не найден email' };
+  }
+
+  const courseMeta = {
+    tariff: row.tariff || '',
+    accessUntil: row.accessUntil || '',
+    phone: row.phone || '',
+    registrationDate: row.registrationDate || '',
+  };
+
+  const existing = await findUserRecordByEmail(email);
+  if (existing?.uid) {
+    let settings = mergeUserIdentityIntoSettings(existing.settings || {}, row, existing.settings || {});
+    settings = assignCourseToUserSettings(settings, courseId, courseMeta, {
+      setAsCurrent: !!options.setAsCurrent,
+      source: options.source || 'admin',
+    });
+    if (!settings.createdAt) settings.createdAt = Date.now();
+    await persistUserSettings(existing.uid, settings);
+    return { email, fullName: settings.fullName || row.fullName || email, courseId, action: 'обновлён', note: 'Доступ к курсу обновлён' };
+  }
+
+  try {
+    const uid = await createFirebaseAuthUser(email);
+    let settings = mergeUserIdentityIntoSettings({}, row, { email });
+    settings = assignCourseToUserSettings(settings, courseId, courseMeta, {
+      setAsCurrent: options.setAsCurrent !== false,
+      source: options.source || 'admin',
+    });
+    settings.createdAt = Date.now();
+    settings.createdBy = currentUser?.uid || 'admin';
+    await persistUserSettings(uid, settings);
+    let inviteNote = '';
+    if (options.sendInvite !== false) {
+      try {
+        await sendPasswordSetupEmail(email);
+        inviteNote = 'Письмо Firebase для установки пароля отправлено';
+      } catch (inviteError) {
+        inviteNote = 'Аккаунт создан, но письмо не отправилось';
+      }
+    }
+    return { email, fullName: settings.fullName || row.fullName || email, courseId, action: inviteNote ? 'создан' : 'создан', note: inviteNote };
+  } catch (error) {
+    if (String(error.message || '').includes('EMAIL_EXISTS')) {
+      let pending = mergeUserIdentityIntoSettings(existing?.settings || {}, row, { email });
+      pending = assignCourseToUserSettings(pending, courseId, courseMeta, {
+        setAsCurrent: !!options.setAsCurrent,
+        source: 'pending',
+      });
+      if (!pending.createdAt) pending.createdAt = Date.now();
+      await storePendingEnrollment(email, pending);
+      let note = 'Аккаунт уже есть в Firebase Auth, доступ будет применён после первого входа';
+      try {
+        if (options.sendInvite !== false) {
+          await sendPasswordSetupEmail(email);
+          note += ' · ссылка на установку пароля отправлена';
+        }
+      } catch (_) {}
+      return { email, fullName: pending.fullName || row.fullName || email, courseId, action: 'обновлён', note };
+    }
+    return { email, fullName: row.fullName || email, courseId, action: 'ошибка', note: String(error.message || error) };
+  }
+}
+
+async function runAdminUserImport() {
+  if (!adminUserImportRows.length) {
+    showToast('⚠️ Сначала загрузи файл');
+    return;
+  }
+  const courseId = document.getElementById('adminUserImportCourse')?.value || selectedCourseId;
+  adminUserImportReport = [];
+  renderAdminImportReport();
+  for (const row of adminUserImportRows) {
+    const result = await upsertUserFromAdminRow(row, {
+      courseId,
+      sendInvite: true,
+      setAsCurrent: false,
+      source: 'import',
+    });
+    adminUserImportReport.push(result);
+    renderAdminImportReport();
+  }
+  showToast('✅ Импорт завершён');
+}
+
+function resetAdminManualUserForm() {
+  ['adminManualUserEmail','adminManualUserFirstName','adminManualUserLastName','adminManualUserMiddleName','adminManualUserTariff','adminManualUserAccessUntil','adminManualUserPhone'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  syncAdminUserCourseSelects();
+}
+
+async function adminCreateUserManually() {
+  const row = {
+    email: document.getElementById('adminManualUserEmail').value,
+    firstName: document.getElementById('adminManualUserFirstName').value.trim(),
+    lastName: document.getElementById('adminManualUserLastName').value.trim(),
+    middleName: document.getElementById('adminManualUserMiddleName').value.trim(),
+    fullName: buildDisplayNameFromParts({
+      firstName: document.getElementById('adminManualUserFirstName').value.trim(),
+      lastName: document.getElementById('adminManualUserLastName').value.trim(),
+      middleName: document.getElementById('adminManualUserMiddleName').value.trim(),
+    }),
+    tariff: document.getElementById('adminManualUserTariff').value.trim(),
+    accessUntil: document.getElementById('adminManualUserAccessUntil').value,
+    phone: document.getElementById('adminManualUserPhone').value.trim(),
+  };
+  if (!normalizeEmail(row.email) || !row.firstName || !row.lastName) {
+    showToast('⚠️ Заполни email, имя и фамилию');
+    return;
+  }
+  const courseId = document.getElementById('adminManualUserCourse').value || selectedCourseId;
+  const result = await upsertUserFromAdminRow(row, {
+    courseId,
+    sendInvite: true,
+    setAsCurrent: true,
+    source: 'manual',
+  });
+  showToast(result.action.startsWith('ошибка') ? '❌ Ошибка создания пользователя' : '✅ Пользователь обработан');
+  adminUserImportReport = [result, ...adminUserImportReport];
+  renderAdminImportReport();
+  if (!result.action.startsWith('ошибка')) resetAdminManualUserForm();
+}
+
+function getAccessibleCourseIds(settings = {}) {
+  return Object.keys(settings.courses || {}).filter(courseId => settings.courses?.[courseId]);
+}
+
+function renderAdminSelectedUser() {
+  const container = document.getElementById('adminUserSearchResult');
+  if (!container) return;
+  if (!adminSelectedUser) {
+    container.innerHTML = '<div class="empty-state"><div class="e-icon">👤</div>Найди пользователя по email, чтобы изменить доступы и курс</div>';
+    return;
+  }
+  const { settings, uid, pending } = adminSelectedUser;
+  const fullName = settings.fullName || buildDisplayNameFromParts(settings) || settings.email;
+  const accessibleCourses = getAccessibleCourseIds(settings);
+  container.innerHTML = `
+    <div class="admin-user-card">
+      <div class="admin-user-card-top">
+        <div style="min-width:0">
+          <div class="admin-user-name">${escapeHtml(fullName || 'Без имени')}</div>
+          <div class="admin-user-email">${escapeHtml(settings.email || '—')}</div>
+        </div>
+        <div class="admin-report-badge ${pending ? 'warn' : ''}">${pending ? 'Ожидает первый вход' : 'Найден'}</div>
+      </div>
+
+      <div class="admin-inline-grid">
+        <div class="admin-form-row">
+          <label class="admin-label">Имя</label>
+          <input type="text" class="admin-input" id="adminUserCardFirstName" value="${escapeHtml(settings.firstName || '')}">
+        </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Фамилия</label>
+          <input type="text" class="admin-input" id="adminUserCardLastName" value="${escapeHtml(settings.lastName || '')}">
+        </div>
+      </div>
+
+      <div class="admin-inline-grid">
+        <div class="admin-form-row">
+          <label class="admin-label">Отчество</label>
+          <input type="text" class="admin-input" id="adminUserCardMiddleName" value="${escapeHtml(settings.middleName || '')}">
+        </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Текущий / выбранный курс</label>
+          <select class="admin-select" id="adminUserCardCurrentCourse"></select>
+        </div>
+      </div>
+
+      <div class="admin-inline-grid">
+        <div class="admin-form-row">
+          <label class="admin-label">Добавить доступ к курсу</label>
+          <select class="admin-select" id="adminUserCardAddCourse"></select>
+        </div>
+        <div class="admin-form-row" style="display:flex;align-items:flex-end">
+          <button class="admin-btn blue" onclick="adminAddCourseToSelectedUser()">Добавить курс</button>
+        </div>
+      </div>
+
+      <div class="admin-helper-text">UID: ${escapeHtml(uid || 'пока нет')} · selectedCourseId: ${escapeHtml(settings.selectedCourseId || '—')} · currentCourseId: ${escapeHtml(settings.currentCourseId || '—')}</div>
+
+      <div class="admin-course-chip-list">
+        ${accessibleCourses.map(courseId => `
+          <span class="admin-chip">
+            ${escapeHtml(getCourseById(courseId).shortName || getCourseById(courseId).name)}
+            ${courseId !== DEFAULT_COURSE_ID ? `<button class="admin-chip-btn" type="button" onclick="adminRemoveCourseFromSelectedUser('${courseId}')">×</button>` : ''}
+          </span>
+        `).join('') || '<span class="admin-chip">Курсы не назначены</span>'}
+      </div>
+
+      <div class="admin-user-actions" style="margin-top:12px">
+        <button class="admin-btn blue" style="flex:1" onclick="adminSaveSelectedUserProfile()">💾 Сохранить пользователя</button>
+        <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="adminResendInviteToSelectedUser()">✉️ Отправить ссылку на пароль</button>
+      </div>
+    </div>
+  `;
+  syncAdminUserCourseSelects();
+}
+
+async function adminSearchUser() {
+  const email = document.getElementById('adminUserSearchEmail').value.trim();
+  if (!normalizeEmail(email)) {
+    showToast('⚠️ Введи email');
+    return;
+  }
+  const found = await findUserRecordByEmail(email);
+  if (!found) {
+    adminSelectedUser = null;
+    renderAdminSelectedUser();
+    showToast('ℹ️ Пользователь не найден');
+    return;
+  }
+  adminSelectedUser = {
+    uid: found.uid,
+    pending: !!found.pending,
+    settings: ensureLegacyCourseAccess(mergeUserIdentityIntoSettings(found.settings || {}, {}, found.settings || {}), { skipDefaultCourse: true }),
+  };
+  renderAdminSelectedUser();
+}
+
+async function adminSaveSelectedUserProfile() {
+  if (!adminSelectedUser) return;
+  const updatedIdentity = {
+    firstName: document.getElementById('adminUserCardFirstName').value.trim(),
+    lastName: document.getElementById('adminUserCardLastName').value.trim(),
+    middleName: document.getElementById('adminUserCardMiddleName').value.trim(),
+    email: adminSelectedUser.settings.email,
+  };
+  let settings = mergeUserIdentityIntoSettings(adminSelectedUser.settings, updatedIdentity, adminSelectedUser.settings);
+  const selectedCourseIdValue = document.getElementById('adminUserCardCurrentCourse').value || settings.selectedCourseId || DEFAULT_COURSE_ID;
+  settings = assignCourseToUserSettings(settings, selectedCourseIdValue, settings.courseMeta?.[selectedCourseIdValue] || {}, {
+    setAsCurrent: true,
+    source: 'manual_edit',
+  });
+  settings.selectedCourseId = selectedCourseIdValue;
+  settings.currentCourseId = selectedCourseIdValue;
+
+  if (adminSelectedUser.uid) await persistUserSettings(adminSelectedUser.uid, settings);
+  else await storePendingEnrollment(settings.email, settings);
+  adminSelectedUser.settings = settings;
+  renderAdminSelectedUser();
+  showToast('✅ Пользователь обновлён');
+}
+
+async function adminAddCourseToSelectedUser() {
+  if (!adminSelectedUser) return;
+  const courseId = document.getElementById('adminUserCardAddCourse').value;
+  if (!courseId) {
+    showToast('⚠️ Выбери курс');
+    return;
+  }
+  let settings = assignCourseToUserSettings(adminSelectedUser.settings, courseId, adminSelectedUser.settings.courseMeta?.[courseId] || {}, {
+    setAsCurrent: false,
+    source: 'manual_edit',
+  });
+  if (adminSelectedUser.uid) await persistUserSettings(adminSelectedUser.uid, settings);
+  else await storePendingEnrollment(settings.email, settings);
+  adminSelectedUser.settings = settings;
+  renderAdminSelectedUser();
+  showToast('✅ Доступ к курсу добавлен');
+}
+
+async function adminRemoveCourseFromSelectedUser(courseId) {
+  if (!adminSelectedUser || courseId === DEFAULT_COURSE_ID) return;
+  if (getAccessibleCourseIds(adminSelectedUser.settings).length <= 1) {
+    showToast('⚠️ У пользователя должен остаться хотя бы один курс');
+    return;
+  }
+  let settings = {
+    ...adminSelectedUser.settings,
+    courses: { ...(adminSelectedUser.settings.courses || {}) },
+    courseMeta: { ...(adminSelectedUser.settings.courseMeta || {}) },
+  };
+  delete settings.courses[courseId];
+  delete settings.courseMeta[courseId];
+  settings = ensureLegacyCourseAccess(settings, { skipDefaultCourse: true });
+  if (!settings.courses[settings.selectedCourseId]) settings.selectedCourseId = Object.keys(settings.courses)[0] || DEFAULT_COURSE_ID;
+  if (!settings.courses[settings.currentCourseId]) settings.currentCourseId = settings.selectedCourseId;
+  if (adminSelectedUser.uid) await persistUserSettings(adminSelectedUser.uid, settings);
+  else await storePendingEnrollment(settings.email, settings);
+  adminSelectedUser.settings = settings;
+  renderAdminSelectedUser();
+  showToast('🗑️ Доступ к курсу убран');
+}
+
+async function adminResendInviteToSelectedUser() {
+  if (!adminSelectedUser?.settings?.email) return;
+  try {
+    await sendPasswordSetupEmail(adminSelectedUser.settings.email);
+    showToast('✉️ Ссылка на установку пароля отправлена');
+  } catch (error) {
+    showToast('❌ Не удалось отправить письмо');
+  }
+}
+
+function renderAdminUsersModule() {
+  syncAdminUserCourseSelects();
+  renderAdminUserImportPreview();
+  renderAdminImportReport();
+  renderAdminSelectedUser();
 }
 
 // ═══════════════════════════════════════════════════
@@ -4734,8 +6002,9 @@ function renderAdminEvents() {
   }
   el.innerHTML = evs.sort((a,b)=>a[1].date.localeCompare(b[1].date)).map(([id,ev]) => {
     const meta = getEventTypeMeta(ev.type);
+    const safeTitle = escapeHtml(ev.title || '');
     return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:10px;background:white;border-radius:10px;border:1.5px solid var(--border)">
-      <span style="font-size:11px;font-weight:700;color:var(--text);flex:1">${ev.date} — ${ev.title} <span style="color:${meta.color}">${meta.icon} ${meta.label}</span></span>
+      <span style="font-size:11px;font-weight:700;color:var(--text);flex:1">${ev.date} — ${safeTitle} <span style="color:${meta.color}">${meta.icon} ${meta.label}</span></span>
       <button class="del-btn" onclick="adminDeleteEvent('${id}')">🗑️</button>
     </div>`;
   }).join('');
@@ -4807,6 +6076,7 @@ renderAll = function() {
 
 // Auth-based init: Firebase handles rendering after login
 // loadState is called inside onUserLoggedIn after auth
+applyPublicRegistrationVisibility();
 checkAdmin();
 initFirebase();
 // Fallback: if Firebase not configured, load from localStorage directly
@@ -4867,8 +6137,8 @@ function saveQuizResult(qid, correct) {
   Promise.all(writes).catch(err => console.warn('saveQuizResult error', err));
   // Give XP for correct answer
   if (correct) {
-    state.totalXP = (state.totalXP || 0);
     const xpGain = 5;
+    state.totalXP = (state.totalXP || 0) + xpGain;
     showXPPopup(xpGain, document.getElementById('quizStartBtn'));
     state.done = state.done || {};
     saveState();
@@ -4908,8 +6178,9 @@ function setQuizMode(mode) {
 function setQuizFilter(type, val, evt) {
   if (type === 'theme') quizThemeFilter = val;
   if (type === 'olympiad') quizOlympiadFilter = val;
-  document.querySelectorAll(`#quiz${type.charAt(0).toUpperCase()+type.slice(1)}Filter .quiz-filter-btn`).forEach(b => b.classList.remove('active'));
-  const target = evt?.target || window.event?.target || globalThis.event?.target;
+  const selector = `#quiz${type.charAt(0).toUpperCase()+type.slice(1)}Filter .quiz-filter-btn`;
+  document.querySelectorAll(selector).forEach(b => b.classList.remove('active'));
+  const target = evt?.currentTarget || evt?.target || window.event?.target || globalThis.event?.target;
   if (target) target.classList.add('active');
 }
 
@@ -4983,22 +6254,24 @@ function quizNext() {
 function renderQuestion(q) {
   const area = document.getElementById('quizQuestionArea');
   const themeIcons = { sociology:'👥', politics:'🏛️', economics:'💰', law:'⚖️', philosophy:'🧠', culturology:'🎨' };
+  const safeSubtopic = escapeHtml(q.subtopic || '');
+  const safeQuestion = escapeHtml(q.question || '');
 
   let optionsHTML = '';
   if (q.type === 'single' || q.type === 'multi') {
     const opts = (q.options || []);
     optionsHTML = `<div class="quiz-options">${opts.map((opt, i) =>
-      `<button class="quiz-option" data-idx="${i}" onclick="quizSelect(this, '${q.type}')">${opt}</button>`
+      `<button class="quiz-option" data-idx="${i}" onclick="quizSelect(this, '${q.type}')">${escapeHtml(opt)}</button>`
     ).join('')}</div>`;
   } else if (q.type === 'match') {
     const pairs = q.pairs || [];
     const shuffledDefs = [...pairs.map(p=>p.definition)].sort(()=>Math.random()-0.5);
     optionsHTML = `<div class="quiz-match-pairs">${pairs.map((p, i) =>
       `<div class="quiz-match-row">
-        <div class="quiz-match-term">${p.term}</div>
+        <div class="quiz-match-term">${escapeHtml(p.term || '')}</div>
         <select class="quiz-match-select" data-idx="${i}">
           <option value="">— выбери —</option>
-          ${shuffledDefs.map(d => `<option value="${d}">${d}</option>`).join('')}
+          ${shuffledDefs.map(d => `<option value="${escapeHtml(d || '')}">${escapeHtml(d || '')}</option>`).join('')}
         </select>
       </div>`
     ).join('')}</div>`;
@@ -5009,9 +6282,9 @@ function renderQuestion(q) {
       <div class="quiz-meta">
         <span class="quiz-badge">${themeIcons[q.theme]||''} ${CATEGORIES[q.theme]?.name||q.theme}</span>
         <span class="quiz-badge olympiad">${getTestCategoryLabel(q.olympiad, q.courseId || selectedCourseId)} ${q.year||''}</span>
-        ${q.subtopic ? `<span class="quiz-badge theme">${q.subtopic}</span>` : ''}
+        ${q.subtopic ? `<span class="quiz-badge theme">${safeSubtopic}</span>` : ''}
       </div>
-      <div class="quiz-question-text">${q.question}</div>
+      <div class="quiz-question-text">${safeQuestion}</div>
       ${optionsHTML}
       <div class="quiz-feedback" id="quizFeedback">
         <div class="quiz-feedback-title" id="quizFeedbackTitle"></div>
