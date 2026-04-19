@@ -2196,6 +2196,13 @@ body {
         </div>
       </div>
 
+      <div class="admin-form-row">
+        <label class="admin-label">Предмет (банк вопросов)</label>
+        <select class="admin-select" id="adminCourseSubjectId">
+          <option value="">— без предмета (собственный банк) —</option>
+        </select>
+      </div>
+
       <div class="admin-course-toolbar">
         <button class="admin-btn blue" style="flex:2" onclick="adminSaveCourse()">💾 Сохранить курс</button>
         <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="adminCourseReset()">Сбросить</button>
@@ -2264,6 +2271,38 @@ body {
       </div>
 
       <div id="adminTestCategoryList" class="admin-course-list"></div>
+
+      <div style="height:1px;background:var(--border);margin:18px 0"></div>
+      <div style="font-family:'Unbounded',sans-serif;font-size:12px;color:var(--text);font-weight:700;margin-bottom:10px">📚 Предметы / Банки вопросов</div>
+
+      <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:10px">
+        Предмет — общий банк вопросов для нескольких потоков одного курса. Все потоки, привязанные к предмету, разделяют вопросы и категории тестов.
+      </div>
+
+      <div style="font-size:13px;color:var(--text2);font-weight:800;margin-bottom:10px" id="adminSubjectModeLabel">Новый предмет</div>
+
+      <div class="admin-inline-grid">
+        <div class="admin-form-row">
+          <label class="admin-label">subjectId</label>
+          <input type="text" class="admin-input" id="adminSubjectId" placeholder="Например: obshchestvoznanie">
+        </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Иконка</label>
+          <input type="text" class="admin-input" id="adminSubjectIcon" placeholder="📚">
+        </div>
+      </div>
+
+      <div class="admin-form-row">
+        <label class="admin-label">Название предмета</label>
+        <input type="text" class="admin-input" id="adminSubjectName" placeholder="Обществознание">
+      </div>
+
+      <div class="admin-course-toolbar">
+        <button class="admin-btn blue" style="flex:2" onclick="adminSaveSubject()">💾 Сохранить предмет</button>
+        <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="adminSubjectReset()">Сбросить</button>
+      </div>
+
+      <div id="adminSubjectList" class="admin-course-list"></div>
         </div>
       </div>
     </div>
@@ -2790,6 +2829,8 @@ const SPRINT_END   = new Date('2026-11-30');
 const DEFAULT_COURSE_ID = 'course_default';
 const COURSE_META_PATH = 'courses';
 const COURSE_DATA_ROOT = 'course_data';
+const SUBJECTS_ROOT = 'subjects';
+const QUESTION_BANKS_ROOT = 'question_banks';
 const USER_SETTINGS_ROOT = 'users';
 const USER_EMAIL_INDEX_ROOT = 'user_email_index';
 const PENDING_USER_ENROLLMENTS_ROOT = 'pending_user_enrollments';
@@ -2884,6 +2925,7 @@ function createDefaultState() {
 
 let state = createDefaultState();
 let courseCatalog = {};
+let subjectCatalog = {};
 let availableCourses = [];
 let currentCourse = null;
 let selectedCourseId = DEFAULT_COURSE_ID;
@@ -2891,6 +2933,7 @@ let courseSubscriptions = [];
 let courseCatalogReadyResolver = null;
 let courseContextReady = false;
 let adminTestCategoryEditingId = null;
+let adminSubjectEditingId = null;
 const courseCatalogReady = new Promise(resolve => { courseCatalogReadyResolver = resolve; });
 
 function escapeHtml(value) {
@@ -2933,6 +2976,7 @@ function normalizeCourse(courseId, raw = {}) {
     sortOrder: Number.isFinite(raw.sortOrder) ? raw.sortOrder : fallback.sortOrder,
     startDate: raw.startDate || fallback.startDate,
     endDate: raw.endDate || fallback.endDate,
+    subjectId: raw.subjectId || '',
     testCategories: rawCategories ? { ...rawCategories } : null,
   };
 }
@@ -2972,6 +3016,14 @@ function getDefaultTestCategories() {
 
 function getTestCategoriesForCourse(courseId = selectedCourseId) {
   const course = getCourseById(courseId);
+  if (course.subjectId) {
+    const subject = subjectCatalog[course.subjectId];
+    if (subject?.testCategories && Object.keys(subject.testCategories).length) {
+      return Object.entries(subject.testCategories)
+        .map(([id, raw]) => normalizeTestCategory(id, raw || {}))
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'ru'));
+    }
+  }
   const source = course.testCategories && Object.keys(course.testCategories).length
     ? course.testCategories
     : getDefaultTestCategories();
@@ -3052,6 +3104,36 @@ function getProgressCacheKey(courseId = selectedCourseId) {
 
 function getCourseCollectionPath(collection, courseId = selectedCourseId) {
   return `${COURSE_DATA_ROOT}/${courseId}/${collection}`;
+}
+
+function getQuestionsSourcePath(courseId = selectedCourseId) {
+  const subjectId = getCourseById(courseId)?.subjectId;
+  if (subjectId) return `${QUESTION_BANKS_ROOT}/${subjectId}/questions`;
+  return getCourseCollectionPath('questions', courseId);
+}
+
+function getSubjectTestCategoriesPath(subjectId) {
+  return `${SUBJECTS_ROOT}/${subjectId}/testCategories`;
+}
+
+function getSubjectById(subjectId) {
+  return subjectCatalog[subjectId] || { id: subjectId, name: subjectId, icon: '📚' };
+}
+
+function getSortedSubjects() {
+  return Object.values(subjectCatalog).sort((a, b) =>
+    (a.sortOrder || 0) - (b.sortOrder || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'ru'));
+}
+
+function getMaterializedSubjectTestCategories(subjectId) {
+  const subject = subjectCatalog[subjectId] || {};
+  const source = subject.testCategories && Object.keys(subject.testCategories).length
+    ? subject.testCategories : {};
+  return Object.entries(source).reduce((acc, [id, raw]) => {
+    acc[id] = { id, name: raw.name || id, shortName: raw.shortName || raw.name || id,
+      active: raw.active !== false, sortOrder: Number.isFinite(raw.sortOrder) ? raw.sortOrder : 0 };
+    return acc;
+  }, {});
 }
 
 function getProgressPath(uid, courseId = selectedCourseId) {
@@ -3584,8 +3666,8 @@ function subscribeCourseCollections(courseId = selectedCourseId) {
 
   courseSubscriptions.push(
     subscribeCourseAwareValue(
-      getCourseCollectionPath('questions', courseId),
-      isLegacyCompatCourse(courseId) ? 'questions' : null,
+      getQuestionsSourcePath(courseId),
+      (!getCourseById(courseId)?.subjectId && isLegacyCompatCourse(courseId)) ? 'questions' : null,
       value => {
         quizQuestions = value ? Object.values(value).map(q => normalizeQuestionRecord(q, courseId)) : [];
         renderAdminQuestionList();
@@ -4776,6 +4858,7 @@ function initFirebase() {
       }, {});
       if (!normalized[DEFAULT_COURSE_ID]) normalized[DEFAULT_COURSE_ID] = getDefaultCourse();
       courseCatalog = normalized;
+      renderCourseSubjectSelect();
       if (courseCatalogReadyResolver) {
         courseCatalogReadyResolver();
         courseCatalogReadyResolver = null;
@@ -4790,6 +4873,12 @@ function initFirebase() {
           }
         });
       }
+    });
+    db.ref(SUBJECTS_ROOT).on('value', snap => {
+      subjectCatalog = snap.val() || {};
+      renderAdminSubjectManager();
+      renderCourseSubjectSelect();
+      renderAdminTestCategoryManager();
     });
   } catch(e) { console.warn('Firebase init error:', e); hideLoading(); }
 }
@@ -5048,6 +5137,8 @@ function adminCourseReset() {
   document.getElementById('adminCourseEndDate').value = '';
   document.getElementById('adminCourseActive').value = 'true';
   document.getElementById('adminCourseLegacyCompat').value = 'false';
+  const subjSel = document.getElementById('adminCourseSubjectId');
+  if (subjSel) subjSel.value = '';
 }
 
 function adminEditCourse(courseId) {
@@ -5067,6 +5158,7 @@ function adminEditCourse(courseId) {
   document.getElementById('adminCourseEndDate').value = course.endDate || '';
   document.getElementById('adminCourseActive').value = course.active === false ? 'false' : 'true';
   document.getElementById('adminCourseLegacyCompat').value = course.legacyCompat ? 'true' : 'false';
+  renderCourseSubjectSelect(course.subjectId || '');
   const body = document.querySelector('#adminCourseEditorModal .admin-course-editor-body');
   if (body) body.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -5098,6 +5190,7 @@ function renderAdminCourseManager() {
         <span class="admin-chip">sort: ${course.sortOrder || 0}</span>
         <span class="admin-chip">${course.startDate || 'без даты старта'}</span>
         <span class="admin-chip">${course.endDate || 'без даты окончания'}</span>
+        ${course.subjectId ? `<span class="admin-chip">📚 ${escapeHtml(getSubjectById(course.subjectId).name)}</span>` : ''}
         ${course.legacyCompat ? '<span class="admin-chip">legacy fallback</span>' : ''}
       </div>
       <div class="admin-course-actions">
@@ -5109,6 +5202,8 @@ function renderAdminCourseManager() {
   `).join('');
 
   renderAdminTestCategoryManager();
+  renderAdminSubjectManager();
+  renderCourseSubjectSelect();
 }
 
 function adminTestCategoryReset() {
@@ -5155,15 +5250,22 @@ function renderAdminTestCategoryManager() {
   const modeLabel = document.getElementById('adminTestCategoryModeLabel');
   if (!listEl) return;
   const course = getCourseById(selectedCourseId);
-  if (contextTitle) contextTitle.textContent = `Курс: ${course.name}`;
-  if (contextMeta) contextMeta.textContent = `Изменения затронут только категории тестов курса «${course.shortName || course.name}»`;
-  if (contextChip) contextChip.textContent = `courseId: ${selectedCourseId}`;
+  const ctxSubjectId = course.subjectId;
+  if (ctxSubjectId) {
+    const subject = getSubjectById(ctxSubjectId);
+    if (contextTitle) contextTitle.textContent = `Предмет: ${subject.icon || '📚'} ${subject.name}`;
+    if (contextMeta) contextMeta.textContent = `Изменения затронут все курсы предмета «${subject.name}»`;
+    if (contextChip) contextChip.textContent = `subjectId: ${ctxSubjectId}`;
+    if (modeLabel && !adminTestCategoryEditingId) modeLabel.textContent = `Новая категория для предмета: ${subject.name}`;
+  } else {
+    if (contextTitle) contextTitle.textContent = `Курс: ${course.name}`;
+    if (contextMeta) contextMeta.textContent = `Изменения затронут только категории тестов курса «${course.shortName || course.name}»`;
+    if (contextChip) contextChip.textContent = `courseId: ${selectedCourseId}`;
+    if (modeLabel && !adminTestCategoryEditingId) modeLabel.textContent = `Новая категория для курса: ${course.shortName || course.name}`;
+  }
   if (switchCourseBtn) switchCourseBtn.style.display = currentUser && availableCourses.length > 1 ? '' : 'none';
   if (adminTestCategoryEditingId && !getTestCategoryMapForCourse(selectedCourseId)[adminTestCategoryEditingId]) {
     adminTestCategoryEditingId = null;
-  }
-  if (modeLabel && !adminTestCategoryEditingId) {
-    modeLabel.textContent = `Новая категория для курса: ${course.shortName || course.name}`;
   }
   const categories = getTestCategoriesForCourse(selectedCourseId);
   if (!categories.length) {
@@ -5197,17 +5299,20 @@ function renderAdminTestCategoryManager() {
 
 async function adminToggleTestCategoryActive(categoryId) {
   if (!db) return;
+  const course = getCourseById(selectedCourseId);
   const category = getTestCategoryMapForCourse(selectedCourseId)[categoryId];
   if (!category) return;
   const nextActive = category.active === false;
-  const categories = getMaterializedCourseTestCategories(selectedCourseId);
-  categories[categoryId] = {
-    ...categories[categoryId],
-    active: nextActive,
-    updatedAt: Date.now(),
-  };
-  await db.ref(`${COURSE_META_PATH}/${selectedCourseId}/testCategories`).set(categories);
-  syncCourseTestCategoriesLocally(selectedCourseId, categories);
+  if (course.subjectId) {
+    const categories = getMaterializedSubjectTestCategories(course.subjectId);
+    categories[categoryId] = { ...categories[categoryId], active: nextActive, updatedAt: Date.now() };
+    await db.ref(getSubjectTestCategoriesPath(course.subjectId)).set(categories);
+  } else {
+    const categories = getMaterializedCourseTestCategories(selectedCourseId);
+    categories[categoryId] = { ...categories[categoryId], active: nextActive, updatedAt: Date.now() };
+    await db.ref(`${COURSE_META_PATH}/${selectedCourseId}/testCategories`).set(categories);
+    syncCourseTestCategoriesLocally(selectedCourseId, categories);
+  }
   renderAdminTestCategoryManager();
   renderCourseControls();
   showToast(nextActive ? '✅ Категория включена' : '🙈 Категория скрыта');
@@ -5216,10 +5321,17 @@ async function adminToggleTestCategoryActive(categoryId) {
 async function adminDeleteTestCategory(categoryId) {
   if (!db) return;
   if (!confirm('Удалить эту категорию тестов?')) return;
-  const categories = getMaterializedCourseTestCategories(selectedCourseId);
-  delete categories[categoryId];
-  await db.ref(`${COURSE_META_PATH}/${selectedCourseId}/testCategories`).set(categories);
-  syncCourseTestCategoriesLocally(selectedCourseId, categories);
+  const course = getCourseById(selectedCourseId);
+  if (course.subjectId) {
+    const categories = getMaterializedSubjectTestCategories(course.subjectId);
+    delete categories[categoryId];
+    await db.ref(getSubjectTestCategoriesPath(course.subjectId)).set(categories);
+  } else {
+    const categories = getMaterializedCourseTestCategories(selectedCourseId);
+    delete categories[categoryId];
+    await db.ref(`${COURSE_META_PATH}/${selectedCourseId}/testCategories`).set(categories);
+    syncCourseTestCategoriesLocally(selectedCourseId, categories);
+  }
   if (adminTestCategoryEditingId === categoryId) adminTestCategoryReset();
   renderAdminTestCategoryManager();
   renderCourseControls();
@@ -5245,28 +5357,116 @@ async function adminSaveTestCategory() {
     return;
   }
 
-  const currentCourseMeta = getCourseById(selectedCourseId);
-  const categories = getMaterializedCourseTestCategories(selectedCourseId);
-  const existing = categories[categoryId] || {};
+  const course = getCourseById(selectedCourseId);
   const isEditing = !!adminTestCategoryEditingId;
-  const payload = {
-    ...existing,
-    id: categoryId,
-    name,
-    shortName: shortName || name,
-    active,
-    sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0,
-    updatedAt: Date.now(),
-  };
-  if (!existing.createdAt) payload.createdAt = Date.now();
 
-  categories[categoryId] = payload;
-  await db.ref(`${COURSE_META_PATH}/${selectedCourseId}/testCategories`).set(categories);
-  syncCourseTestCategoriesLocally(selectedCourseId, categories);
+  if (course.subjectId) {
+    const categories = getMaterializedSubjectTestCategories(course.subjectId);
+    const existing = categories[categoryId] || {};
+    const payload = { ...existing, id: categoryId, name, shortName: shortName || name, active,
+      sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0, updatedAt: Date.now() };
+    if (!existing.createdAt) payload.createdAt = Date.now();
+    categories[categoryId] = payload;
+    await db.ref(getSubjectTestCategoriesPath(course.subjectId)).set(categories);
+  } else {
+    const categories = getMaterializedCourseTestCategories(selectedCourseId);
+    const existing = categories[categoryId] || {};
+    const payload = { ...existing, id: categoryId, name, shortName: shortName || name, active,
+      sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0, updatedAt: Date.now() };
+    if (!existing.createdAt) payload.createdAt = Date.now();
+    categories[categoryId] = payload;
+    await db.ref(`${COURSE_META_PATH}/${selectedCourseId}/testCategories`).set(categories);
+    syncCourseTestCategoriesLocally(selectedCourseId, categories);
+  }
   renderAdminTestCategoryManager();
   renderCourseControls();
   adminTestCategoryReset();
   showToast(isEditing ? '✅ Категория обновлена' : '✅ Категория создана');
+}
+
+function renderCourseSubjectSelect(selectedValue) {
+  const sel = document.getElementById('adminCourseSubjectId');
+  if (!sel) return;
+  const current = selectedValue !== undefined ? selectedValue : sel.value;
+  const subjects = getSortedSubjects();
+  sel.innerHTML = `<option value="">— без предмета (собственный банк) —</option>` +
+    subjects.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml((s.icon || '📚') + ' ' + s.name)}</option>`).join('');
+  sel.value = current;
+}
+
+function adminSubjectReset() {
+  adminSubjectEditingId = null;
+  const modeLabel = document.getElementById('adminSubjectModeLabel');
+  if (modeLabel) modeLabel.textContent = 'Новый предмет';
+  const idInput = document.getElementById('adminSubjectId');
+  if (idInput) { idInput.value = ''; idInput.readOnly = false; idInput.style.opacity = '1'; }
+  const nameEl = document.getElementById('adminSubjectName');
+  const iconEl = document.getElementById('adminSubjectIcon');
+  if (nameEl) nameEl.value = '';
+  if (iconEl) iconEl.value = '';
+}
+
+function adminEditSubject(subjectId) {
+  openAdminCourseEditor();
+  const subject = getSubjectById(subjectId);
+  adminSubjectEditingId = subjectId;
+  const modeLabel = document.getElementById('adminSubjectModeLabel');
+  if (modeLabel) modeLabel.textContent = `Редактирование: ${subject.name}`;
+  const idInput = document.getElementById('adminSubjectId');
+  if (idInput) { idInput.value = subjectId; idInput.readOnly = true; idInput.style.opacity = '0.7'; }
+  const nameEl = document.getElementById('adminSubjectName');
+  const iconEl = document.getElementById('adminSubjectIcon');
+  if (nameEl) nameEl.value = subject.name || '';
+  if (iconEl) iconEl.value = subject.icon || '';
+  const body = document.querySelector('#adminCourseEditorModal .admin-course-editor-body');
+  if (body) body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' });
+}
+
+async function adminSaveSubject() {
+  if (!db) { showToast('⚠️ Firebase не подключён'); return; }
+  const rawId = document.getElementById('adminSubjectId').value.trim();
+  const name = document.getElementById('adminSubjectName').value.trim();
+  const icon = document.getElementById('adminSubjectIcon').value.trim();
+  if (!name) { showToast('⚠️ Заполни название предмета'); return; }
+  const subjectId = adminSubjectEditingId || rawId || slugifyCourseId(name);
+  if (!subjectId) { showToast('⚠️ Укажи subjectId или название'); return; }
+  const existing = subjectCatalog[subjectId] || {};
+  const isEditing = !!adminSubjectEditingId;
+  const meta = { id: subjectId, name, icon: icon || '📚', updatedAt: Date.now() };
+  if (!existing.createdAt) meta.createdAt = Date.now();
+  await db.ref(`${SUBJECTS_ROOT}/${subjectId}`).update(meta);
+  adminSubjectReset();
+  showToast(isEditing ? '✅ Предмет обновлён' : '✅ Предмет создан');
+}
+
+function renderAdminSubjectManager() {
+  const listEl = document.getElementById('adminSubjectList');
+  if (!listEl) return;
+  const subjects = getSortedSubjects();
+  if (!subjects.length) {
+    listEl.innerHTML = '<div class="empty-state"><div class="e-icon">📚</div>Предметов пока нет. Создай первый предмет выше.</div>';
+    return;
+  }
+  listEl.innerHTML = subjects.map(s => {
+    const courseCount = Object.values(courseCatalog).filter(c => c.subjectId === s.id).length;
+    const catCount = s.testCategories ? Object.keys(s.testCategories).length : 0;
+    return `
+    <div class="admin-course-card">
+      <div class="admin-course-top">
+        <div style="min-width:0">
+          <div class="admin-course-name">${escapeHtml((s.icon || '📚') + ' ' + s.name)}</div>
+          <div class="admin-course-desc">id: ${escapeHtml(s.id)}</div>
+        </div>
+      </div>
+      <div class="admin-task-meta">
+        <span class="admin-chip">${courseCount} поток${courseCount===1?'':'ов'}</span>
+        <span class="admin-chip">${catCount} категор${catCount===1?'ия':catCount<5?'ии':'ий'} тестов</span>
+      </div>
+      <div class="admin-course-actions">
+        <button class="edit-btn" onclick="adminEditSubject('${escapeHtml(s.id)}')">Ред.</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 async function adminToggleCourseActive(courseId) {
@@ -5296,6 +5496,7 @@ async function adminSaveCourse() {
   const endDate = document.getElementById('adminCourseEndDate').value;
   const active = document.getElementById('adminCourseActive').value === 'true';
   const legacyCompat = document.getElementById('adminCourseLegacyCompat').value === 'true';
+  const subjectId = document.getElementById('adminCourseSubjectId')?.value.trim() || '';
 
   if (!name) {
     showToast('⚠️ Заполни название курса');
@@ -5320,6 +5521,7 @@ async function adminSaveCourse() {
     legacyCompat,
     startDate: startDate || '',
     endDate: endDate || '',
+    subjectId: subjectId || '',
     updatedAt: Date.now(),
   };
   if (!existing.createdAt) payload.createdAt = Date.now();
@@ -6541,11 +6743,11 @@ function adminAddQuestion() {
     if (!qData.pairs.length) { showToast('⚠️ Формат: термин|определение'); return; }
   }
 
-  const ref = db.ref(getCourseCollectionPath('questions')).push();
+  const ref = db.ref(getQuestionsSourcePath()).push();
   qData.id = ref.key;
   qData.courseId = selectedCourseId;
   const writes = [ref.set(qData)];
-  if (isLegacyCompatCourse()) writes.push(db.ref(`questions/${ref.key}`).set(qData));
+  if (!getCourseById(selectedCourseId)?.subjectId && isLegacyCompatCourse()) writes.push(db.ref(`questions/${ref.key}`).set(qData));
   Promise.all(writes)
     .then(() => {
       // Clear form
@@ -6708,8 +6910,8 @@ function adminSaveQuestion() {
   }
 
   updated.courseId = selectedCourseId;
-  const writes = [db.ref(`${getCourseCollectionPath('questions')}/${editingQId}`).set(updated)];
-  if (isLegacyCompatCourse()) writes.push(db.ref(`questions/${editingQId}`).set(updated));
+  const writes = [db.ref(`${getQuestionsSourcePath()}/${editingQId}`).set(updated)];
+  if (!getCourseById(selectedCourseId)?.subjectId && isLegacyCompatCourse()) writes.push(db.ref(`questions/${editingQId}`).set(updated));
   Promise.all(writes)
     .then(() => {
       closeEditQModal();
@@ -6721,8 +6923,8 @@ function adminSaveQuestion() {
 function adminDeleteQuestion(qid) {
   if (!confirm('Удалить этот вопрос?')) return;
   if (!db) return;
-  const writes = [db.ref(`${getCourseCollectionPath('questions')}/${qid}`).remove()];
-  if (isLegacyCompatCourse()) writes.push(db.ref(`questions/${qid}`).remove());
+  const writes = [db.ref(`${getQuestionsSourcePath()}/${qid}`).remove()];
+  if (!getCourseById(selectedCourseId)?.subjectId && isLegacyCompatCourse()) writes.push(db.ref(`questions/${qid}`).remove());
   Promise.all(writes)
     .then(() => showToast('🗑️ Вопрос удалён'))
     .catch(() => showToast('❌ Ошибка'));
