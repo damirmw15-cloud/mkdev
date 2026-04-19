@@ -324,6 +324,37 @@ body {
   border: 1.5px solid #FFE4A0;
   box-shadow: 0 2px 12px rgba(245,166,35,0.1);
 }
+.editor-tab-bar {
+  display: flex;
+  gap: 6px;
+  background: var(--c5);
+  border-radius: 10px;
+  padding: 4px;
+}
+.editor-tab {
+  flex: 1;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all .18s;
+  white-space: nowrap;
+}
+.editor-tab.active {
+  background: white;
+  color: var(--text);
+  box-shadow: 0 2px 8px rgba(26,41,64,.1);
+}
+.cat-editor-section {
+  background: var(--c5);
+  border-radius: 14px;
+  padding: 14px;
+  margin-top: 14px;
+}
 .admin-workspace-switch {
   display: flex;
   gap: 8px;
@@ -2131,14 +2162,19 @@ body {
   <div class="admin-course-editor-overlay" id="adminCourseEditorModal" onclick="handleAdminCourseEditorOverlay(event)">
     <div class="admin-course-editor-modal">
       <div class="admin-course-editor-head">
-        <div>
-          <div class="admin-course-editor-title">⚙️ Редактор курсов</div>
-          <div class="admin-course-editor-subtitle">Создание курсов, настройка параметров и управление категориями тестов</div>
+        <div style="min-width:0">
+          <div class="admin-course-editor-title">⚙️ Настройки</div>
+        </div>
+        <div class="editor-tab-bar" style="flex:1;max-width:260px">
+          <button class="editor-tab active" id="editorTabCourses" onclick="switchEditorTab('courses')">🎓 Курсы</button>
+          <button class="editor-tab" id="editorTabSubjects" onclick="switchEditorTab('subjects')">📚 Предметы</button>
         </div>
         <button class="admin-course-editor-close" type="button" onclick="closeAdminCourseEditor()" aria-label="Закрыть">×</button>
       </div>
       <div class="admin-course-editor-body">
-        <div class="admin-course-editor-panel" id="adminSectionCourses">
+
+        <!-- ══════════ TAB: КУРСЫ ══════════ -->
+        <div class="admin-course-editor-panel" id="editorPanelCourses">
       <div style="font-size:13px;color:var(--text2);font-weight:800;margin-bottom:10px" id="adminCourseModeLabel">Новый курс</div>
 
       <div class="admin-inline-grid">
@@ -2213,100 +2249,146 @@ body {
       </div>
 
       <div id="adminCourseList" class="admin-course-list"></div>
+        </div><!-- end editorPanelCourses -->
 
-      <div style="height:1px;background:var(--border);margin:14px 0"></div>
-      <div style="font-family:'Unbounded',sans-serif;font-size:12px;color:var(--text);font-weight:700;margin-bottom:10px">🧪 Олимпиады / категории тестов</div>
+        <!-- ══════════ TAB: ПРЕДМЕТЫ ══════════ -->
+        <div class="admin-course-editor-panel" id="editorPanelSubjects" style="display:none">
 
-      <div id="adminTestCategoryCourseContext" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:10px 12px;margin-bottom:10px;background:linear-gradient(135deg,#F7FBFF,#EEF8FF);border:1.5px solid #D8ECFA;border-radius:14px">
-        <div style="min-width:0">
-          <div style="font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Контекст редактирования</div>
-          <div id="adminTestCategoryCourseContextTitle" style="font-size:13px;font-weight:900;color:var(--text)">Курс: —</div>
-          <div id="adminTestCategoryCourseContextMeta" style="font-size:11px;font-weight:700;color:var(--text2);margin-top:2px">Категории будут сохранены в выбранный курс</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-          <div id="adminTestCategoryCourseContextChip" class="admin-chip">courseId: —</div>
-          <button id="adminTestCategorySwitchCourseBtn" type="button" class="admin-btn" onclick="openCourseSwitcher()" style="padding:8px 12px;background:var(--c4);color:var(--c1);white-space:nowrap">Сменить курс</button>
-        </div>
-      </div>
+          <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:12px">
+            Предмет — общий банк вопросов и категорий для нескольких потоков. Потоки, привязанные к предмету, разделяют вопросы, олимпиады и учебные блоки.
+          </div>
 
-      <div style="font-size:13px;color:var(--text2);font-weight:800;margin-bottom:10px" id="adminTestCategoryModeLabel">Новая категория тестов</div>
+          <div style="font-size:13px;color:var(--text2);font-weight:800;margin-bottom:10px" id="adminSubjectModeLabel">Новый предмет</div>
 
-      <div class="admin-inline-grid">
-        <div class="admin-form-row">
-          <label class="admin-label">categoryId</label>
-          <input type="text" class="admin-input" id="adminTestCategoryId" placeholder="Например: ege_history">
-        </div>
-        <div class="admin-form-row">
-          <label class="admin-label">Порядок</label>
-          <input type="number" class="admin-input" id="adminTestCategorySortOrder" placeholder="10">
-        </div>
-      </div>
+          <div class="admin-inline-grid">
+            <div class="admin-form-row">
+              <label class="admin-label">subjectId</label>
+              <input type="text" class="admin-input" id="adminSubjectId" placeholder="Например: obshchestvoznanie">
+            </div>
+            <div class="admin-form-row">
+              <label class="admin-label">Иконка</label>
+              <input type="text" class="admin-input" id="adminSubjectIcon" placeholder="📚">
+            </div>
+          </div>
 
-      <div class="admin-inline-grid">
-        <div class="admin-form-row">
-          <label class="admin-label">Название</label>
-          <input type="text" class="admin-input" id="adminTestCategoryName" placeholder="ЕГЭ по истории">
-        </div>
-        <div class="admin-form-row">
-          <label class="admin-label">Короткое имя</label>
-          <input type="text" class="admin-input" id="adminTestCategoryShortName" placeholder="ЕГЭ">
-        </div>
-      </div>
+          <div class="admin-form-row">
+            <label class="admin-label">Название предмета</label>
+            <input type="text" class="admin-input" id="adminSubjectName" placeholder="Обществознание">
+          </div>
 
-      <div class="admin-form-row">
-        <label class="admin-label">Статус</label>
-        <select class="admin-select" id="adminTestCategoryActive">
-          <option value="true">Активна</option>
-          <option value="false">Скрыта</option>
-        </select>
-      </div>
+          <div class="admin-course-toolbar">
+            <button class="admin-btn blue" style="flex:2" onclick="adminSaveSubject()">💾 Сохранить предмет</button>
+            <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="adminSubjectReset()">Сбросить</button>
+          </div>
 
-      <div class="admin-course-toolbar">
-        <button class="admin-btn blue" style="flex:2" onclick="adminSaveTestCategory()">💾 Сохранить категорию</button>
-        <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="adminTestCategoryReset()">Сбросить</button>
-      </div>
+          <div id="adminSubjectList" class="admin-course-list"></div>
 
-      <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:10px">
-        Эти категории используются в фильтрах тестов и в формах добавления/редактирования вопросов выбранного курса.
-      </div>
+          <!-- Редактор категорий выбранного предмета -->
+          <div id="adminSubjectCatEditor" style="display:none">
+            <div style="height:1px;background:var(--border);margin:16px 0"></div>
 
-      <div id="adminTestCategoryList" class="admin-course-list"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+              <div>
+                <div style="font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:2px">Редактирование категорий</div>
+                <div id="adminSubjectCatEditorTitle" style="font-size:14px;font-weight:900;color:var(--text)">—</div>
+              </div>
+              <div id="adminSubjectCatEditorChip" class="admin-chip">subjectId: —</div>
+            </div>
 
-      <div style="height:1px;background:var(--border);margin:18px 0"></div>
-      <div style="font-family:'Unbounded',sans-serif;font-size:12px;color:var(--text);font-weight:700;margin-bottom:10px">📚 Предметы / Банки вопросов</div>
+            <div class="editor-tab-bar" style="margin-bottom:14px">
+              <button class="editor-tab active" id="catTabOlympiad" onclick="switchCatEditorTab('olympiad')">🧪 Олимпиады</button>
+              <button class="editor-tab" id="catTabTaskcat" onclick="switchCatEditorTab('taskcat')">📂 Учебные блоки</button>
+            </div>
 
-      <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:10px">
-        Предмет — общий банк вопросов для нескольких потоков одного курса. Все потоки, привязанные к предмету, разделяют вопросы и категории тестов.
-      </div>
+            <!-- ── Олимпиады ── -->
+            <div id="catPanelOlympiad">
+              <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:10px">Классификатор олимпиад (ВП, ВсОШ, Ломоносов…) — используется в фильтрах тестов и поле «olympiad» у вопросов.</div>
+              <div style="font-size:13px;color:var(--text2);font-weight:800;margin-bottom:10px" id="adminTestCategoryModeLabel">Новая олимпиада</div>
+              <div class="admin-inline-grid">
+                <div class="admin-form-row">
+                  <label class="admin-label">categoryId</label>
+                  <input type="text" class="admin-input" id="adminTestCategoryId" placeholder="vp_obsh">
+                </div>
+                <div class="admin-form-row">
+                  <label class="admin-label">Порядок</label>
+                  <input type="number" class="admin-input" id="adminTestCategorySortOrder" placeholder="10">
+                </div>
+              </div>
+              <div class="admin-inline-grid">
+                <div class="admin-form-row">
+                  <label class="admin-label">Название</label>
+                  <input type="text" class="admin-input" id="adminTestCategoryName" placeholder="Высшая проба">
+                </div>
+                <div class="admin-form-row">
+                  <label class="admin-label">Короткое имя</label>
+                  <input type="text" class="admin-input" id="adminTestCategoryShortName" placeholder="ВП">
+                </div>
+              </div>
+              <div class="admin-form-row">
+                <label class="admin-label">Статус</label>
+                <select class="admin-select" id="adminTestCategoryActive">
+                  <option value="true">Активна</option>
+                  <option value="false">Скрыта</option>
+                </select>
+              </div>
+              <div class="admin-course-toolbar">
+                <button class="admin-btn blue" style="flex:2" onclick="adminSaveTestCategory()">💾 Сохранить</button>
+                <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="adminTestCategoryReset()">Сбросить</button>
+              </div>
+              <div id="adminTestCategoryList" class="admin-course-list"></div>
+            </div>
 
-      <div style="font-size:13px;color:var(--text2);font-weight:800;margin-bottom:10px" id="adminSubjectModeLabel">Новый предмет</div>
+            <!-- ── Учебные блоки ── -->
+            <div id="catPanelTaskcat" style="display:none">
+              <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:10px">Учебные блоки (социология, право…) — используются в прогрессе «По предметам» и категориях задач.</div>
+              <div style="font-size:13px;color:var(--text2);font-weight:800;margin-bottom:10px" id="adminTaskCatModeLabel">Новый учебный блок</div>
+              <div class="admin-inline-grid">
+                <div class="admin-form-row">
+                  <label class="admin-label">id блока</label>
+                  <input type="text" class="admin-input" id="adminTaskCatId" placeholder="civil_law">
+                </div>
+                <div class="admin-form-row">
+                  <label class="admin-label">Порядок</label>
+                  <input type="number" class="admin-input" id="adminTaskCatSortOrder" placeholder="10">
+                </div>
+              </div>
+              <div class="admin-inline-grid">
+                <div class="admin-form-row">
+                  <label class="admin-label">Название</label>
+                  <input type="text" class="admin-input" id="adminTaskCatName" placeholder="Гражданское право">
+                </div>
+                <div class="admin-form-row">
+                  <label class="admin-label">Иконка</label>
+                  <input type="text" class="admin-input" id="adminTaskCatIcon" placeholder="⚖️">
+                </div>
+              </div>
+              <div class="admin-form-row">
+                <label class="admin-label">Цвет</label>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <input type="text" class="admin-input" id="adminTaskCatColor" placeholder="#8BAFD0" style="flex:1;min-width:100px">
+                  <div style="display:flex;gap:5px;flex-wrap:wrap">
+                    <div onclick="document.getElementById('adminTaskCatColor').value='#64AFDC'" style="width:22px;height:22px;border-radius:5px;background:#64AFDC;cursor:pointer" title="#64AFDC"></div>
+                    <div onclick="document.getElementById('adminTaskCatColor').value='#7BC8E0'" style="width:22px;height:22px;border-radius:5px;background:#7BC8E0;cursor:pointer" title="#7BC8E0"></div>
+                    <div onclick="document.getElementById('adminTaskCatColor').value='#5BB8A8'" style="width:22px;height:22px;border-radius:5px;background:#5BB8A8;cursor:pointer" title="#5BB8A8"></div>
+                    <div onclick="document.getElementById('adminTaskCatColor').value='#8BAFD0'" style="width:22px;height:22px;border-radius:5px;background:#8BAFD0;cursor:pointer" title="#8BAFD0"></div>
+                    <div onclick="document.getElementById('adminTaskCatColor').value='#A0C4D8'" style="width:22px;height:22px;border-radius:5px;background:#A0C4D8;cursor:pointer" title="#A0C4D8"></div>
+                    <div onclick="document.getElementById('adminTaskCatColor').value='#90CADC'" style="width:22px;height:22px;border-radius:5px;background:#90CADC;cursor:pointer" title="#90CADC"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="admin-course-toolbar">
+                <button class="admin-btn blue" style="flex:2" onclick="adminSaveTaskCategory()">💾 Сохранить</button>
+                <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="adminTaskCatReset()">Сбросить</button>
+              </div>
+              <div id="adminTaskCategoryList" class="admin-course-list"></div>
+            </div>
+          </div>
 
-      <div class="admin-inline-grid">
-        <div class="admin-form-row">
-          <label class="admin-label">subjectId</label>
-          <input type="text" class="admin-input" id="adminSubjectId" placeholder="Например: obshchestvoznanie">
-        </div>
-        <div class="admin-form-row">
-          <label class="admin-label">Иконка</label>
-          <input type="text" class="admin-input" id="adminSubjectIcon" placeholder="📚">
-        </div>
-      </div>
+        </div><!-- end editorPanelSubjects -->
 
-      <div class="admin-form-row">
-        <label class="admin-label">Название предмета</label>
-        <input type="text" class="admin-input" id="adminSubjectName" placeholder="Обществознание">
-      </div>
-
-      <div class="admin-course-toolbar">
-        <button class="admin-btn blue" style="flex:2" onclick="adminSaveSubject()">💾 Сохранить предмет</button>
-        <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="adminSubjectReset()">Сбросить</button>
-      </div>
-
-      <div id="adminSubjectList" class="admin-course-list"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+      </div><!-- end admin-course-editor-body -->
+    </div><!-- end admin-course-editor-modal -->
+  </div><!-- end adminCourseEditorModal -->
 
   <div class="admin-workspace-switch">
     <button class="admin-workspace-btn active" id="adminWorkspaceBtn_courses" type="button" onclick="setAdminWorkspaceMode('courses')">🎓 Курсы</button>
@@ -2934,6 +3016,8 @@ let courseCatalogReadyResolver = null;
 let courseContextReady = false;
 let adminTestCategoryEditingId = null;
 let adminSubjectEditingId = null;
+let adminTaskCategoryEditingId = null;
+let selectedSubjectForTaskCats = null;
 const courseCatalogReady = new Promise(resolve => { courseCatalogReadyResolver = resolve; });
 
 function escapeHtml(value) {
@@ -3123,6 +3207,30 @@ function getSubjectById(subjectId) {
 function getSortedSubjects() {
   return Object.values(subjectCatalog).sort((a, b) =>
     (a.sortOrder || 0) - (b.sortOrder || 0) || String(a.name || '').localeCompare(String(b.name || ''), 'ru'));
+}
+
+function getSubjectTaskCategoriesPath(subjectId) {
+  return `${SUBJECTS_ROOT}/${subjectId}/taskCategories`;
+}
+
+function getTaskCategoriesForCourse(courseId = selectedCourseId) {
+  const course = getCourseById(courseId);
+  if (course.subjectId) {
+    const subject = subjectCatalog[course.subjectId];
+    if (subject?.taskCategories && Object.keys(subject.taskCategories).length) {
+      return Object.values(subject.taskCategories)
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    }
+  }
+  return Object.entries(CATEGORIES).map(([id, c]) => ({ id, ...c }));
+}
+
+function getTaskCategoryMapForCourse(courseId = selectedCourseId) {
+  return getTaskCategoriesForCourse(courseId).reduce((acc, c) => { acc[c.id] = c; return acc; }, {});
+}
+
+function getTaskCategoryInfo(catId, courseId = selectedCourseId) {
+  return getTaskCategoryMapForCourse(courseId)[catId] || { id: catId, name: catId || '—', icon: '📚', color: '#90CADC' };
 }
 
 function getMaterializedSubjectTestCategories(subjectId) {
@@ -3713,6 +3821,7 @@ async function switchCourse(courseId, options = {}) {
   quizOlympiadFilter = 'all';
 
   renderCourseControls();
+  renderTaskCatOptions();
   subscribeCourseCollections(nextCourseId);
   await loadCourseProgress(nextCourseId);
 
@@ -3768,10 +3877,12 @@ function closeCourseSwitcher() {
   if (overlay) overlay.remove();
 }
 
-function openAdminCourseEditor() {
+function openAdminCourseEditor(tab = 'courses') {
   const modal = document.getElementById('adminCourseEditorModal');
   if (!modal) return;
   renderAdminCourseManager();
+  renderAdminSubjectManager();
+  switchEditorTab(tab);
   modal.classList.add('show');
   document.body.style.overflow = 'hidden';
 }
@@ -3790,6 +3901,39 @@ function handleAdminCourseEditorOverlay(event) {
 function openAdminCourseEditorFromSwitcher() {
   closeCourseSwitcher();
   openAdminCourseEditor();
+}
+
+function switchEditorTab(tab) {
+  document.getElementById('editorPanelCourses').style.display = tab === 'courses' ? '' : 'none';
+  document.getElementById('editorPanelSubjects').style.display = tab === 'subjects' ? '' : 'none';
+  document.getElementById('editorTabCourses').classList.toggle('active', tab === 'courses');
+  document.getElementById('editorTabSubjects').classList.toggle('active', tab === 'subjects');
+}
+
+function switchCatEditorTab(tab) {
+  document.getElementById('catPanelOlympiad').style.display = tab === 'olympiad' ? '' : 'none';
+  document.getElementById('catPanelTaskcat').style.display = tab === 'taskcat' ? '' : 'none';
+  document.getElementById('catTabOlympiad').classList.toggle('active', tab === 'olympiad');
+  document.getElementById('catTabTaskcat').classList.toggle('active', tab === 'taskcat');
+}
+
+function selectSubjectForEditing(subjectId, tab = 'olympiad') {
+  selectedSubjectForTaskCats = subjectId;
+  const editor = document.getElementById('adminSubjectCatEditor');
+  if (!editor) return;
+  editor.style.display = '';
+  const subject = getSubjectById(subjectId);
+  const titleEl = document.getElementById('adminSubjectCatEditorTitle');
+  const chipEl = document.getElementById('adminSubjectCatEditorChip');
+  if (titleEl) titleEl.textContent = `${subject.icon || '📚'} ${subject.name}`;
+  if (chipEl) chipEl.textContent = `subjectId: ${subjectId}`;
+  switchCatEditorTab(tab);
+  adminTestCategoryReset();
+  adminTaskCatReset();
+  renderAdminTestCategoryManager();
+  renderAdminTaskCategoryManager();
+  const body = document.querySelector('#adminCourseEditorModal .admin-course-editor-body');
+  if (body) body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' });
 }
 
 async function handleCourseOptionClick(courseId) {
@@ -4150,7 +4294,7 @@ function renderRecentBadges() {
 
 function renderTaskHTML(t) {
   const isDone = !!state.done[t.id];
-  const cat = CATEGORIES[t.cat];
+  const cat = getTaskCategoryInfo(t.cat);
   return `<div class="task-item ${isDone?'done':''}" data-id="${t.id}">
     <div class="task-check">
       <span class="task-check-icon">✓</span>
@@ -4197,7 +4341,7 @@ function renderTasks() {
 
   el.innerHTML = cats.map(cat => {
     const catTasks = wTasks.filter(t => t.cat === cat);
-    const catInfo = CATEGORIES[cat];
+    const catInfo = getTaskCategoryInfo(cat);
     const catXP = catTasks.reduce((s,t) => s + t.xp, 0);
     return `<div class="category-block">
       <div class="cat-header">
@@ -4217,22 +4361,21 @@ function renderTasks() {
 }
 
 function renderProgress() {
-  const cats = Object.keys(CATEGORIES);
-  document.getElementById('categoryProgress').innerHTML = cats.map(cat => {
-    const total = getCatTotal(cat);
-    const done = getCatDone(cat);
+  const cats = getTaskCategoriesForCourse();
+  document.getElementById('categoryProgress').innerHTML = cats.map(c => {
+    const total = getCatTotal(c.id);
+    const done = getCatDone(c.id);
     const pct = total ? Math.round(done/total*100) : 0;
-    const catInfo = CATEGORIES[cat];
     return `<div class="cat-progress-card">
       <div class="cat-progress-header">
         <div class="cat-progress-name">
-          <div class="cat-dot" style="background:${catInfo.color}"></div>
-          ${catInfo.icon} ${catInfo.name}
+          <div class="cat-dot" style="background:${c.color||'#90CADC'}"></div>
+          ${c.icon||''} ${c.name}
         </div>
         <div class="cat-progress-pct">${pct}%</div>
       </div>
       <div class="cat-bar">
-        <div class="cat-bar-fill" style="width:${pct}%;background:${catInfo.color}"></div>
+        <div class="cat-bar-fill" style="width:${pct}%;background:${c.color||'#90CADC'}"></div>
       </div>
       <div class="cat-stats">${done} / ${total} задач</div>
     </div>`;
@@ -4879,6 +5022,8 @@ function initFirebase() {
       renderAdminSubjectManager();
       renderCourseSubjectSelect();
       renderAdminTestCategoryManager();
+      renderTaskCatOptions();
+      renderAdminTaskCategoryManager();
     });
   } catch(e) { console.warn('Firebase init error:', e); hideLoading(); }
 }
@@ -5142,7 +5287,7 @@ function adminCourseReset() {
 }
 
 function adminEditCourse(courseId) {
-  openAdminCourseEditor();
+  openAdminCourseEditor('courses');
   const course = getCourseById(courseId);
   adminCourseEditingId = course.id;
   const idInput = document.getElementById('adminCourseId');
@@ -5201,137 +5346,83 @@ function renderAdminCourseManager() {
     </div>
   `).join('');
 
-  renderAdminTestCategoryManager();
-  renderAdminSubjectManager();
   renderCourseSubjectSelect();
 }
 
 function adminTestCategoryReset() {
   adminTestCategoryEditingId = null;
   const idInput = document.getElementById('adminTestCategoryId');
-  const course = getCourseById(selectedCourseId);
-  if (idInput) {
-    idInput.value = '';
-    idInput.readOnly = false;
-    idInput.style.opacity = '1';
-  }
-  document.getElementById('adminTestCategoryModeLabel').textContent = `Новая категория для курса: ${course.shortName || course.name}`;
-  document.getElementById('adminTestCategoryName').value = '';
-  document.getElementById('adminTestCategoryShortName').value = '';
-  document.getElementById('adminTestCategorySortOrder').value = '';
-  document.getElementById('adminTestCategoryActive').value = 'true';
+  if (idInput) { idInput.value = ''; idInput.readOnly = false; idInput.style.opacity = '1'; }
+  const modeLabel = document.getElementById('adminTestCategoryModeLabel');
+  if (modeLabel) modeLabel.textContent = 'Новая олимпиада';
+  ['adminTestCategoryName','adminTestCategoryShortName','adminTestCategorySortOrder']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const activeEl = document.getElementById('adminTestCategoryActive');
+  if (activeEl) activeEl.value = 'true';
 }
 
 function adminEditTestCategory(categoryId) {
-  openAdminCourseEditor();
-  const category = getTestCategoryMapForCourse(selectedCourseId)[categoryId];
+  if (!selectedSubjectForTaskCats) return;
+  const cats = getMaterializedSubjectTestCategories(selectedSubjectForTaskCats);
+  const category = cats[categoryId];
   if (!category) return;
-  const course = getCourseById(selectedCourseId);
   adminTestCategoryEditingId = category.id;
   const idInput = document.getElementById('adminTestCategoryId');
-  idInput.value = category.id;
-  idInput.readOnly = true;
-  idInput.style.opacity = '0.7';
-  document.getElementById('adminTestCategoryModeLabel').textContent = `Редактирование категории: ${category.name} · курс ${course.shortName || course.name}`;
+  if (idInput) { idInput.value = category.id; idInput.readOnly = true; idInput.style.opacity = '0.7'; }
+  const modeLabel = document.getElementById('adminTestCategoryModeLabel');
+  if (modeLabel) modeLabel.textContent = `Редактирование: ${category.name}`;
   document.getElementById('adminTestCategoryName').value = category.name || '';
   document.getElementById('adminTestCategoryShortName').value = category.shortName || '';
   document.getElementById('adminTestCategorySortOrder').value = Number.isFinite(category.sortOrder) ? String(category.sortOrder) : '';
   document.getElementById('adminTestCategoryActive').value = category.active === false ? 'false' : 'true';
-  const body = document.querySelector('#adminCourseEditorModal .admin-course-editor-body');
-  if (body) body.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function renderAdminTestCategoryManager() {
   const listEl = document.getElementById('adminTestCategoryList');
-  const contextTitle = document.getElementById('adminTestCategoryCourseContextTitle');
-  const contextMeta = document.getElementById('adminTestCategoryCourseContextMeta');
-  const contextChip = document.getElementById('adminTestCategoryCourseContextChip');
-  const switchCourseBtn = document.getElementById('adminTestCategorySwitchCourseBtn');
-  const modeLabel = document.getElementById('adminTestCategoryModeLabel');
-  if (!listEl) return;
-  const course = getCourseById(selectedCourseId);
-  const ctxSubjectId = course.subjectId;
-  if (ctxSubjectId) {
-    const subject = getSubjectById(ctxSubjectId);
-    if (contextTitle) contextTitle.textContent = `Предмет: ${subject.icon || '📚'} ${subject.name}`;
-    if (contextMeta) contextMeta.textContent = `Изменения затронут все курсы предмета «${subject.name}»`;
-    if (contextChip) contextChip.textContent = `subjectId: ${ctxSubjectId}`;
-    if (modeLabel && !adminTestCategoryEditingId) modeLabel.textContent = `Новая категория для предмета: ${subject.name}`;
-  } else {
-    if (contextTitle) contextTitle.textContent = `Курс: ${course.name}`;
-    if (contextMeta) contextMeta.textContent = `Изменения затронут только категории тестов курса «${course.shortName || course.name}»`;
-    if (contextChip) contextChip.textContent = `courseId: ${selectedCourseId}`;
-    if (modeLabel && !adminTestCategoryEditingId) modeLabel.textContent = `Новая категория для курса: ${course.shortName || course.name}`;
-  }
-  if (switchCourseBtn) switchCourseBtn.style.display = currentUser && availableCourses.length > 1 ? '' : 'none';
-  if (adminTestCategoryEditingId && !getTestCategoryMapForCourse(selectedCourseId)[adminTestCategoryEditingId]) {
-    adminTestCategoryEditingId = null;
-  }
-  const categories = getTestCategoriesForCourse(selectedCourseId);
-  if (!categories.length) {
-    listEl.innerHTML = '<div class="empty-state"><div class="e-icon">🧪</div>Категорий тестов пока нет</div>';
+  if (!listEl || !selectedSubjectForTaskCats) return;
+  const cats = Object.values(getMaterializedSubjectTestCategories(selectedSubjectForTaskCats))
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  if (!cats.length) {
+    listEl.innerHTML = '<div class="empty-state"><div class="e-icon">🧪</div>Олимпиад пока нет</div>';
     return;
   }
-
-  listEl.innerHTML = categories.map(category => `
+  listEl.innerHTML = cats.map(c => `
     <div class="admin-course-card">
       <div class="admin-course-top">
         <div style="min-width:0">
-          <div class="admin-course-name">${escapeHtml(category.name)}</div>
-          <div class="admin-course-desc">id: ${escapeHtml(category.id)} · short: ${escapeHtml(category.shortName || category.name)}</div>
+          <div class="admin-course-name">${escapeHtml(c.name)}</div>
+          <div class="admin-course-desc">id: ${escapeHtml(c.id)} · short: ${escapeHtml(c.shortName || c.name)}</div>
         </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div class="admin-chip">${category.active === false ? 'Скрыта' : 'Активна'}</div>
-        </div>
+        <div class="admin-chip">${c.active === false ? 'Скрыта' : 'Активна'}</div>
       </div>
-      <div class="admin-task-meta">
-        <span class="admin-chip">sort: ${category.sortOrder || 0}</span>
-        ${category.id === getDefaultTestCategoryId(selectedCourseId) ? '<span class="admin-chip">по умолчанию</span>' : ''}
-      </div>
+      <div class="admin-task-meta"><span class="admin-chip">sort: ${c.sortOrder || 0}</span></div>
       <div class="admin-course-actions">
-        <button class="edit-btn" onclick="adminEditTestCategory('${category.id}')">Ред.</button>
-        <button class="toggle-btn" onclick="adminToggleTestCategoryActive('${category.id}')">${category.active === false ? 'Включить' : 'Скрыть'}</button>
-        <button class="open-btn" onclick="adminDeleteTestCategory('${category.id}')">Удалить</button>
+        <button class="edit-btn" onclick="adminEditTestCategory('${escapeHtml(c.id)}')">Ред.</button>
+        <button class="toggle-btn" onclick="adminToggleTestCategoryActive('${escapeHtml(c.id)}')">${c.active === false ? 'Включить' : 'Скрыть'}</button>
+        <button class="open-btn" onclick="adminDeleteTestCategory('${escapeHtml(c.id)}')">Удалить</button>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
 async function adminToggleTestCategoryActive(categoryId) {
-  if (!db) return;
-  const course = getCourseById(selectedCourseId);
-  const category = getTestCategoryMapForCourse(selectedCourseId)[categoryId];
-  if (!category) return;
-  const nextActive = category.active === false;
-  if (course.subjectId) {
-    const categories = getMaterializedSubjectTestCategories(course.subjectId);
-    categories[categoryId] = { ...categories[categoryId], active: nextActive, updatedAt: Date.now() };
-    await db.ref(getSubjectTestCategoriesPath(course.subjectId)).set(categories);
-  } else {
-    const categories = getMaterializedCourseTestCategories(selectedCourseId);
-    categories[categoryId] = { ...categories[categoryId], active: nextActive, updatedAt: Date.now() };
-    await db.ref(`${COURSE_META_PATH}/${selectedCourseId}/testCategories`).set(categories);
-    syncCourseTestCategoriesLocally(selectedCourseId, categories);
-  }
+  if (!db || !selectedSubjectForTaskCats) return;
+  const categories = getMaterializedSubjectTestCategories(selectedSubjectForTaskCats);
+  const cat = categories[categoryId];
+  if (!cat) return;
+  const nextActive = cat.active === false;
+  categories[categoryId] = { ...cat, active: nextActive, updatedAt: Date.now() };
+  await db.ref(getSubjectTestCategoriesPath(selectedSubjectForTaskCats)).set(categories);
   renderAdminTestCategoryManager();
   renderCourseControls();
   showToast(nextActive ? '✅ Категория включена' : '🙈 Категория скрыта');
 }
 
 async function adminDeleteTestCategory(categoryId) {
-  if (!db) return;
+  if (!db || !selectedSubjectForTaskCats) return;
   if (!confirm('Удалить эту категорию тестов?')) return;
-  const course = getCourseById(selectedCourseId);
-  if (course.subjectId) {
-    const categories = getMaterializedSubjectTestCategories(course.subjectId);
-    delete categories[categoryId];
-    await db.ref(getSubjectTestCategoriesPath(course.subjectId)).set(categories);
-  } else {
-    const categories = getMaterializedCourseTestCategories(selectedCourseId);
-    delete categories[categoryId];
-    await db.ref(`${COURSE_META_PATH}/${selectedCourseId}/testCategories`).set(categories);
-    syncCourseTestCategoriesLocally(selectedCourseId, categories);
-  }
+  const categories = getMaterializedSubjectTestCategories(selectedSubjectForTaskCats);
+  delete categories[categoryId];
+  await db.ref(getSubjectTestCategoriesPath(selectedSubjectForTaskCats)).set(categories);
   if (adminTestCategoryEditingId === categoryId) adminTestCategoryReset();
   renderAdminTestCategoryManager();
   renderCourseControls();
@@ -5340,48 +5431,47 @@ async function adminDeleteTestCategory(categoryId) {
 
 async function adminSaveTestCategory() {
   if (!db) { showToast('⚠️ Firebase не подключён'); return; }
+  if (!selectedSubjectForTaskCats) { showToast('⚠️ Сначала выбери предмет'); return; }
   const rawId = document.getElementById('adminTestCategoryId').value.trim();
   const name = document.getElementById('adminTestCategoryName').value.trim();
   const shortName = document.getElementById('adminTestCategoryShortName').value.trim();
   const sortOrder = parseInt(document.getElementById('adminTestCategorySortOrder').value, 10);
   const active = document.getElementById('adminTestCategoryActive').value === 'true';
 
-  if (!name) {
-    showToast('⚠️ Заполни название категории');
-    return;
-  }
+  if (!name) { showToast('⚠️ Заполни название категории'); return; }
 
   const categoryId = adminTestCategoryEditingId || rawId || slugifyCourseId(name);
-  if (!categoryId) {
-    showToast('⚠️ Укажи categoryId или название');
-    return;
-  }
+  if (!categoryId) { showToast('⚠️ Укажи categoryId или название'); return; }
 
-  const course = getCourseById(selectedCourseId);
   const isEditing = !!adminTestCategoryEditingId;
-
-  if (course.subjectId) {
-    const categories = getMaterializedSubjectTestCategories(course.subjectId);
-    const existing = categories[categoryId] || {};
-    const payload = { ...existing, id: categoryId, name, shortName: shortName || name, active,
-      sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0, updatedAt: Date.now() };
-    if (!existing.createdAt) payload.createdAt = Date.now();
-    categories[categoryId] = payload;
-    await db.ref(getSubjectTestCategoriesPath(course.subjectId)).set(categories);
-  } else {
-    const categories = getMaterializedCourseTestCategories(selectedCourseId);
-    const existing = categories[categoryId] || {};
-    const payload = { ...existing, id: categoryId, name, shortName: shortName || name, active,
-      sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0, updatedAt: Date.now() };
-    if (!existing.createdAt) payload.createdAt = Date.now();
-    categories[categoryId] = payload;
-    await db.ref(`${COURSE_META_PATH}/${selectedCourseId}/testCategories`).set(categories);
-    syncCourseTestCategoriesLocally(selectedCourseId, categories);
-  }
+  const categories = getMaterializedSubjectTestCategories(selectedSubjectForTaskCats);
+  const existing = categories[categoryId] || {};
+  const payload = { ...existing, id: categoryId, name, shortName: shortName || name, active,
+    sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0, updatedAt: Date.now() };
+  if (!existing.createdAt) payload.createdAt = Date.now();
+  categories[categoryId] = payload;
+  await db.ref(getSubjectTestCategoriesPath(selectedSubjectForTaskCats)).set(categories);
   renderAdminTestCategoryManager();
   renderCourseControls();
   adminTestCategoryReset();
   showToast(isEditing ? '✅ Категория обновлена' : '✅ Категория создана');
+}
+
+function renderTaskCatOptions() {
+  const cats = getTaskCategoriesForCourse();
+  const opts = cats.map(c => `<option value="${escapeHtml(c.id)}">${escapeHtml((c.icon||'') + ' ' + c.name)}</option>`).join('');
+  const filterSel = document.getElementById('taskFilterCat');
+  const editorSel = document.getElementById('taskEditorCat');
+  if (filterSel) {
+    const cur = filterSel.value;
+    filterSel.innerHTML = '<option value="all">Все предметы</option>' + opts;
+    if ([...filterSel.options].some(o => o.value === cur)) filterSel.value = cur;
+  }
+  if (editorSel) {
+    const cur = editorSel.value;
+    editorSel.innerHTML = opts;
+    if ([...editorSel.options].some(o => o.value === cur)) editorSel.value = cur;
+  }
 }
 
 function renderCourseSubjectSelect(selectedValue) {
@@ -5407,7 +5497,7 @@ function adminSubjectReset() {
 }
 
 function adminEditSubject(subjectId) {
-  openAdminCourseEditor();
+  openAdminCourseEditor('subjects');
   const subject = getSubjectById(subjectId);
   adminSubjectEditingId = subjectId;
   const modeLabel = document.getElementById('adminSubjectModeLabel');
@@ -5439,6 +5529,95 @@ async function adminSaveSubject() {
   showToast(isEditing ? '✅ Предмет обновлён' : '✅ Предмет создан');
 }
 
+function openTaskCatEditor(subjectId) {
+  openAdminCourseEditor('subjects');
+  selectSubjectForEditing(subjectId, 'taskcat');
+}
+
+function adminTaskCatReset() {
+  adminTaskCategoryEditingId = null;
+  const modeLabel = document.getElementById('adminTaskCatModeLabel');
+  if (modeLabel) modeLabel.textContent = 'Новая категория задач';
+  const idInput = document.getElementById('adminTaskCatId');
+  if (idInput) { idInput.value = ''; idInput.readOnly = false; idInput.style.opacity = '1'; }
+  ['adminTaskCatName','adminTaskCatIcon','adminTaskCatColor','adminTaskCatSortOrder']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+}
+
+function adminEditTaskCategory(catId) {
+  if (!selectedSubjectForTaskCats) return;
+  const subject = subjectCatalog[selectedSubjectForTaskCats] || {};
+  const cat = (subject.taskCategories || {})[catId];
+  if (!cat) return;
+  adminTaskCategoryEditingId = catId;
+  const modeLabel = document.getElementById('adminTaskCatModeLabel');
+  if (modeLabel) modeLabel.textContent = `Редактирование: ${cat.name}`;
+  const idInput = document.getElementById('adminTaskCatId');
+  if (idInput) { idInput.value = catId; idInput.readOnly = true; idInput.style.opacity = '0.7'; }
+  document.getElementById('adminTaskCatName').value = cat.name || '';
+  document.getElementById('adminTaskCatIcon').value = cat.icon || '';
+  document.getElementById('adminTaskCatColor').value = cat.color || '';
+  document.getElementById('adminTaskCatSortOrder').value = Number.isFinite(cat.sortOrder) ? String(cat.sortOrder) : '';
+}
+
+async function adminSaveTaskCategory() {
+  if (!db || !selectedSubjectForTaskCats) { showToast('⚠️ Сначала выбери предмет'); return; }
+  const rawId = document.getElementById('adminTaskCatId').value.trim();
+  const name = document.getElementById('adminTaskCatName').value.trim();
+  const icon = document.getElementById('adminTaskCatIcon').value.trim();
+  const color = document.getElementById('adminTaskCatColor').value.trim();
+  const sortOrder = parseInt(document.getElementById('adminTaskCatSortOrder').value, 10);
+  if (!name) { showToast('⚠️ Заполни название'); return; }
+  const catId = adminTaskCategoryEditingId || rawId || slugifyCourseId(name);
+  if (!catId) { showToast('⚠️ Укажи id или название'); return; }
+  const subject = subjectCatalog[selectedSubjectForTaskCats] || {};
+  const existing = (subject.taskCategories || {})[catId] || {};
+  const isEditing = !!adminTaskCategoryEditingId;
+  const payload = { ...existing, id: catId, name, icon: icon || '📚',
+    color: color || '#90CADC', sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0, updatedAt: Date.now() };
+  if (!existing.createdAt) payload.createdAt = Date.now();
+  await db.ref(`${getSubjectTaskCategoriesPath(selectedSubjectForTaskCats)}/${catId}`).set(payload);
+  adminTaskCatReset();
+  showToast(isEditing ? '✅ Категория обновлена' : '✅ Категория создана');
+}
+
+async function adminDeleteTaskCategory(catId) {
+  if (!db || !selectedSubjectForTaskCats) return;
+  if (!confirm('Удалить эту категорию задач?')) return;
+  await db.ref(`${getSubjectTaskCategoriesPath(selectedSubjectForTaskCats)}/${catId}`).remove();
+  if (adminTaskCategoryEditingId === catId) adminTaskCatReset();
+  showToast('🗑️ Категория удалена');
+}
+
+function renderAdminTaskCategoryManager() {
+  const listEl = document.getElementById('adminTaskCategoryList');
+  if (!listEl || !selectedSubjectForTaskCats) return;
+  const subject = subjectCatalog[selectedSubjectForTaskCats] || {};
+  const cats = Object.values(subject.taskCategories || {})
+    .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+  if (!cats.length) {
+    listEl.innerHTML = '<div class="empty-state"><div class="e-icon">📂</div>Категорий задач пока нет</div>';
+    return;
+  }
+  listEl.innerHTML = cats.map(c => `
+    <div class="admin-course-card">
+      <div class="admin-course-top">
+        <div style="min-width:0">
+          <div class="admin-course-name">
+            <span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:${escapeHtml(c.color||'#90CADC')};margin-right:6px;vertical-align:middle"></span>
+            ${escapeHtml((c.icon||'') + ' ' + c.name)}
+          </div>
+          <div class="admin-course-desc">id: ${escapeHtml(c.id)}</div>
+        </div>
+        <div class="admin-chip">sort: ${c.sortOrder || 0}</div>
+      </div>
+      <div class="admin-course-actions">
+        <button class="edit-btn" onclick="adminEditTaskCategory('${escapeHtml(c.id)}')">Ред.</button>
+        <button class="open-btn" onclick="adminDeleteTaskCategory('${escapeHtml(c.id)}')">Удалить</button>
+      </div>
+    </div>`).join('');
+}
+
 function renderAdminSubjectManager() {
   const listEl = document.getElementById('adminSubjectList');
   if (!listEl) return;
@@ -5464,6 +5643,7 @@ function renderAdminSubjectManager() {
       </div>
       <div class="admin-course-actions">
         <button class="edit-btn" onclick="adminEditSubject('${escapeHtml(s.id)}')">Ред.</button>
+        <button class="open-btn" onclick="openTaskCatEditor('${escapeHtml(s.id)}')">📂 Категории задач</button>
       </div>
     </div>`;
   }).join('');
@@ -6154,7 +6334,7 @@ function renderTaskEditorList() {
   }
 
   listEl.innerHTML = filtered.map(task => {
-    const cat = CATEGORIES[task.cat] || { name: task.cat || '—', icon: '📚' };
+    const cat = getTaskCategoryInfo(task.cat);
     return `
       <div class="admin-task-item">
         <div class="admin-task-top">
@@ -6482,7 +6662,7 @@ function renderQuestion(q) {
   area.innerHTML = `
     <div class="quiz-question-card">
       <div class="quiz-meta">
-        <span class="quiz-badge">${themeIcons[q.theme]||''} ${CATEGORIES[q.theme]?.name||q.theme}</span>
+        <span class="quiz-badge">${themeIcons[q.theme]||''} ${getTaskCategoryInfo(q.theme).name}</span>
         <span class="quiz-badge olympiad">${getTestCategoryLabel(q.olympiad, q.courseId || selectedCourseId)} ${q.year||''}</span>
         ${q.subtopic ? `<span class="quiz-badge theme">${safeSubtopic}</span>` : ''}
       </div>
@@ -6821,7 +7001,7 @@ function renderAdminQuestionList() {
       !search ||
       q.question?.toLowerCase().includes(search) ||
       q.subtopic?.toLowerCase().includes(search) ||
-      CATEGORIES[q.theme]?.name?.toLowerCase().includes(search) ||
+      getTaskCategoryInfo(q.theme).name?.toLowerCase().includes(search) ||
       getTestCategoryLabel(q.olympiad || q.categoryId, q.courseId || selectedCourseId).toLowerCase().includes(search)
     )
   );
@@ -6836,7 +7016,7 @@ function renderAdminQuestionList() {
   el.innerHTML = filtered.slice(0, 50).map(q => `
     <div style="background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:12px;margin-bottom:8px">
       <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
-        <span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;background:var(--c4);color:var(--c1)">${CATEGORIES[q.theme]?.icon||''} ${CATEGORIES[q.theme]?.name||q.theme}</span>
+        <span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;background:var(--c4);color:var(--c1)">${getTaskCategoryInfo(q.theme).icon||''} ${getTaskCategoryInfo(q.theme).name}</span>
         <span style="font-size:10px;font-weight:800;padding:2px 7px;border-radius:5px;background:#FFF3CD;color:var(--gold)">${getTestCategoryLabel(q.olympiad, q.courseId || selectedCourseId)} ${q.year||''}</span>
         <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:var(--c5);color:var(--text3)">${q.type==='single'?'Один':q.type==='multi'?'Несколько':'Сопоставление'}</span>
       </div>
