@@ -4331,12 +4331,16 @@ function renderHero() {
 function renderCurrentWeekPreview() {
   const el = document.getElementById('currentWeekPreview');
   if (!el) return;
+  const sectionTitle = el.previousElementSibling;
 
   // Hide tasks preview if tasks section is disabled for this course
   if (getCourseById(selectedCourseId)?.tasksEnabled === false) {
-    el.innerHTML = '<div class="empty-state"><div class="e-icon">📚</div>Раздел задач отключён для этого курса</div>';
+    el.style.display = 'none';
+    if (sectionTitle && sectionTitle.classList.contains('section-title')) sectionTitle.style.display = 'none';
     return;
   }
+  el.style.display = '';
+  if (sectionTitle && sectionTitle.classList.contains('section-title')) sectionTitle.style.display = '';
 
   if (!isCourseStarted()) {
     const daysLeft = getDaysUntilStart();
@@ -4454,8 +4458,20 @@ function renderTasks() {
 }
 
 function renderProgress() {
+  const el = document.getElementById('categoryProgress');
+  if (!el) return;
+  const sectionTitle = el.previousElementSibling;
+
+  if (getCourseById(selectedCourseId)?.tasksEnabled === false) {
+    el.style.display = 'none';
+    if (sectionTitle && sectionTitle.classList.contains('section-title')) sectionTitle.style.display = 'none';
+    return;
+  }
+  el.style.display = '';
+  if (sectionTitle && sectionTitle.classList.contains('section-title')) sectionTitle.style.display = '';
+
   const cats = getTaskCategoriesForCourse();
-  document.getElementById('categoryProgress').innerHTML = cats.map(c => {
+  el.innerHTML = cats.map(c => {
     const total = getCatTotal(c.id);
     const done = getCatDone(c.id);
     const pct = total ? Math.round(done/total*100) : 0;
