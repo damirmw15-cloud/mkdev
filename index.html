@@ -2230,6 +2230,13 @@ body {
             <option value="true">Разрешить fallback</option>
           </select>
         </div>
+        <div class="admin-form-row">
+          <label class="admin-label">Раздел задач</label>
+          <select class="admin-select" id="adminCourseTasksEnabled">
+            <option value="true">Включён</option>
+            <option value="false">Скрыт</option>
+          </select>
+        </div>
       </div>
 
       <div class="admin-form-row">
@@ -2653,8 +2660,14 @@ body {
         <div id="adminUserImportPreview" class="admin-user-preview-list">
           <div class="empty-state"><div class="e-icon">📄</div>Загрузи файл, чтобы увидеть предпросмотр</div>
         </div>
+        <div id="adminUserImportProgressWrap" style="display:none;margin-top:12px">
+          <div style="font-size:11px;font-weight:800;color:var(--text2);margin-bottom:4px" id="adminUserImportProgressLabel">Создание пользователей...</div>
+          <div class="progress" style="background:var(--c4);border-radius:10px;height:12px;overflow:hidden">
+            <div class="progress-fill" id="adminUserImportProgressBar" style="width:0%;background:var(--c1);height:100%;border-radius:10px;transition:width 0.3s"></div>
+          </div>
+        </div>
         <div class="admin-course-toolbar" style="margin-top:12px">
-          <button class="admin-btn blue" style="flex:2" onclick="runAdminUserImport()">🚀 Импортировать пользователей</button>
+          <button class="admin-btn blue" style="flex:2" onclick="runAdminUserImport()" id="adminUserImportBtn">🚀 Импортировать пользователей</button>
           <button class="admin-btn" style="flex:1;background:var(--c5);color:var(--c1)" onclick="resetAdminUserImport()">Сбросить</button>
         </div>
       </div>
@@ -2706,7 +2719,7 @@ body {
             <input type="text" class="admin-input" id="adminManualUserPhone" placeholder="+7 999 123-45-67">
           </div>
         </div>
-        <button class="admin-btn blue" onclick="adminCreateUserManually()">Создать и отправить приглашение</button>
+        <button class="admin-btn blue" id="adminManualCreateBtn" onclick="adminCreateUserManually()">Создать и отправить приглашение</button>
       </div>
     </div>
 
@@ -2904,7 +2917,7 @@ body {
 // ═══════════════════════════════════════════════════
 //  СЕРВЕР — Яндекс Cloud Functions (работает из России)
 // ═══════════════════════════════════════════════════
-const SERVER_URL = 'https://functions.yandexcloud.net/d4evsqthteafbgu33s0b';
+const SERVER_URL = window.MK_SERVER_URL || 'https://functions.yandexcloud.net/d4evsqthteafbgu33s0b';
 
 const SPRINT_START = new Date('2026-03-30');
 const SPRINT_END   = new Date('2026-11-30');
@@ -3005,6 +3018,10 @@ function createDefaultState() {
   };
 }
 
+function isValidDate(d) {
+  return d instanceof Date && !isNaN(d.getTime());
+}
+
 let state = createDefaultState();
 let courseCatalog = {};
 let subjectCatalog = {};
@@ -3018,7 +3035,15 @@ let adminTestCategoryEditingId = null;
 let adminSubjectEditingId = null;
 let adminTaskCategoryEditingId = null;
 let selectedSubjectForTaskCats = null;
-const courseCatalogReady = new Promise(resolve => { courseCatalogReadyResolver = resolve; });
+const courseCatalogReady = new Promise(resolve => {
+  courseCatalogReadyResolver = resolve;
+  setTimeout(() => {
+    if (courseCatalogReadyResolver) {
+      courseCatalogReadyResolver = null;
+      resolve();
+    }
+  }, 10000);
+});
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -3038,6 +3063,7 @@ function getDefaultCourse() {
     sortOrder: 0,
     active: true,
     legacyCompat: true,
+    tasksEnabled: true,
     startDate: SPRINT_START.toISOString().slice(0, 10),
     endDate: SPRINT_END.toISOString().slice(0, 10),
   };
@@ -3057,6 +3083,7 @@ function normalizeCourse(courseId, raw = {}) {
     description: raw.description || '',
     active: raw.active !== false,
     legacyCompat: raw.legacyCompat === true || courseId === DEFAULT_COURSE_ID,
+    tasksEnabled: raw.tasksEnabled !== false,
     sortOrder: Number.isFinite(raw.sortOrder) ? raw.sortOrder : fallback.sortOrder,
     startDate: raw.startDate || fallback.startDate,
     endDate: raw.endDate || fallback.endDate,
@@ -3170,12 +3197,14 @@ function normalizeQuestionRecord(question = {}, courseId = selectedCourseId) {
 
 function getCourseStartDate() {
   const value = getCourseById(selectedCourseId)?.startDate;
-  return value ? new Date(value) : new Date(SPRINT_START);
+  const d = value ? new Date(value) : new Date(SPRINT_START);
+  return isValidDate(d) ? d : new Date(SPRINT_START);
 }
 
 function getCourseEndDate() {
   const value = getCourseById(selectedCourseId)?.endDate;
-  return value ? new Date(value) : new Date(SPRINT_END);
+  const d = value ? new Date(value) : new Date(SPRINT_END);
+  return isValidDate(d) ? d : new Date(SPRINT_END);
 }
 
 function isLegacyCompatCourse(courseId = selectedCourseId) {
@@ -3465,6 +3494,25 @@ async function sendPasswordSetupEmail(email) {
   return true;
 }
 
+async function sendPasswordSetupEmailWithRetry(email, retries = 3, baseDelayMs = 3000) {
+  if (!auth) return { success: false, note: 'Firebase Auth не инициализирован' };
+  for (let i = 0; i < retries; i++) {
+    try {
+      await auth.sendPasswordResetEmail(normalizeEmail(email));
+      return { success: true, note: 'Письмо отправлено' };
+    } catch (error) {
+      const isRateLimit = error.code === 'auth/too-many-requests';
+      if (isRateLimit && i < retries - 1) {
+        const delay = baseDelayMs * (i + 1);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+      return { success: false, note: isRateLimit ? 'Rate limit — не удалось отправить письмо' : `Ошибка: ${error.code || error.message}` };
+    }
+  }
+  return { success: false, note: 'Не удалось отправить письмо после нескольких попыток' };
+}
+
 function generateTempPassword() {
   if (globalThis.crypto?.randomUUID) return `${globalThis.crypto.randomUUID()}Aa!1`;
   return `Temp_${Math.random().toString(36).slice(2)}Aa!1`;
@@ -3537,8 +3585,8 @@ function renderCourseControls() {
   const adminNoteValue = document.getElementById('adminCourseNoteValue');
   if (label) label.textContent = getCurrentCourseLabel();
   if (btn) btn.classList.toggle('visible', !!currentUser && availableCourses.length > 1);
-  if (adminNoteValue) adminNoteValue.textContent = `Курс: ${getCourseById(selectedCourseId).name} ▾`;
-  if (adminNote) adminNote.setAttribute('aria-label', `Курс: ${getCourseById(selectedCourseId).name}`);
+  if (adminNoteValue) adminNoteValue.textContent = `Курс: ${getCourseById(selectedCourseId)?.name || selectedCourseId} ▾`;
+  if (adminNote) adminNote.setAttribute('aria-label', `Курс: ${getCourseById(selectedCourseId)?.name || selectedCourseId}`);
   renderQuizOlympiadFilters();
   renderAdminQuestionCategoryFilter();
   renderQuestionCategorySelect('addQOlympiad');
@@ -3564,7 +3612,8 @@ function saveState() {
   const data = JSON.stringify(state);
   localStorage.setItem(getProgressCacheKey(), data);
   if (db && currentUser) {
-    saveProgressToFirebase();
+    if (saveProgressDebounceTimer) clearTimeout(saveProgressDebounceTimer);
+    saveProgressDebounceTimer = setTimeout(() => saveProgressToFirebase(), 1500);
   }
 }
 
@@ -3574,7 +3623,14 @@ function loadStateFromCache(courseId = selectedCourseId) {
   const raw = scoped || legacy;
   state = createDefaultState();
   if (raw) {
-    try { state = { ...state, ...JSON.parse(raw) }; } catch (e) {}
+    try {
+      const parsed = JSON.parse(raw);
+      state = { ...state, ...parsed };
+      if (!state.done || typeof state.done !== 'object' || Array.isArray(state.done)) state.done = {};
+      if (!state.doneTimestamps || typeof state.doneTimestamps !== 'object' || Array.isArray(state.doneTimestamps)) state.doneTimestamps = {};
+      if (typeof state.totalXP !== 'number') state.totalXP = 0;
+      if (typeof state.streak !== 'number') state.streak = 0;
+    } catch (e) {}
   }
   state.currentWeek = state.currentWeek || getCurrentWeekNum();
 }
@@ -3583,7 +3639,10 @@ function loadStateFromCache(courseId = selectedCourseId) {
 //  COMPUTED
 // ═══════════════════════════════════════════════════
 function getDoneCount() { return Object.keys(state.done).filter(k => state.done[k]).length; }
-function getTotalXP() { return getAllTasks().filter(t => state.done[t.id]).reduce((s,t)=>s+t.xp,0); }
+function getTotalXP() {
+  const taskXP = getAllTasks().filter(t => state.done[t.id]).reduce((s,t)=>s+t.xp,0);
+  return taskXP + (state.totalXP || 0);
+}
 function normalizeDate(d) {
   const x = new Date(d);
   x.setHours(0,0,0,0);
@@ -3608,11 +3667,11 @@ function getCurrentWeekNum() {
   return Math.min(Math.max(1, diff + 1), 35);
 }
 function getWeekDates(w) {
-  const d = new Date(getCourseStartDate());
-  d.setDate(d.getDate() + (w-1)*7);
-  const end = new Date(d); end.setDate(end.getDate()+6);
-  const fmt = d => d.toLocaleDateString('ru-RU', {day:'numeric',month:'short'});
-  return `${fmt(d)} – ${fmt(end)}`;
+  const start = new Date(getCourseStartDate());
+  start.setDate(start.getDate() + (w-1)*7);
+  const end = new Date(start); end.setDate(end.getDate()+6);
+  const fmt = date => date.toLocaleDateString('ru-RU', {day:'numeric',month:'short'});
+  return `${fmt(start)} – ${fmt(end)}`;
 }
 function getLevelInfo(xp) {
   for (let i = LEVELS.length-1; i >= 0; i--) {
@@ -3688,6 +3747,8 @@ function getAvailableCoursesForUser(userSettings = {}) {
   return filtered.length ? filtered : [getDefaultCourse()];
 }
 
+const VALID_QUESTION_TYPES = ['single', 'multi', 'match'];
+
 async function persistSelectedCourse(courseId) {
   if (!db || !currentUser) return;
   const path = getUserSettingsPath(currentUser.uid);
@@ -3706,7 +3767,13 @@ function updateCourseDependentViews() {
   renderCalendar();
   renderQuizStats();
   renderWeakThemes();
-  if (document.getElementById('tab-admin').classList.contains('active')) {
+  // Toggle Tasks tab visibility based on course setting
+  const tasksTab = document.querySelector('.nav-tab[onclick="switchTab(\'tasks\')"]');
+  if (tasksTab) {
+    const enabled = getCourseById(selectedCourseId)?.tasksEnabled !== false;
+    tasksTab.style.display = enabled ? '' : 'none';
+  }
+  if (document.getElementById('tab-admin')?.classList.contains('active')) {
     renderAdminWorkspaceMode();
     renderAdminCourseManager();
     renderAdminUsersModule();
@@ -3726,21 +3793,26 @@ async function loadCourseProgress(courseId = selectedCourseId) {
     return;
   }
 
-  const scopedPath = getProgressPath(currentUser.uid, courseId);
-  const legacyPath = isLegacyCompatCourse(courseId) ? getLegacyProgressPath(currentUser.uid) : null;
-  const { value } = await readCourseAwareOnce(scopedPath, legacyPath);
+  try {
+    const scopedPath = getProgressPath(currentUser.uid, courseId);
+    const legacyPath = isLegacyCompatCourse(courseId) ? getLegacyProgressPath(currentUser.uid) : null;
+    const { value } = await readCourseAwareOnce(scopedPath, legacyPath);
 
-  if (value?.data) {
-    try {
-      state = { ...createDefaultState(), ...JSON.parse(value.data) };
-    } catch (e) {
-      state = { ...createDefaultState(), ...state };
+    if (value?.data) {
+      try {
+        state = { ...createDefaultState(), ...JSON.parse(value.data) };
+      } catch (e) {
+        state = { ...createDefaultState(), ...state };
+      }
     }
-  }
 
-  state.currentWeek = state.currentWeek || getCurrentWeekNum();
-  localStorage.setItem(getProgressCacheKey(courseId), JSON.stringify(state));
-  if (isLegacyCompatCourse(courseId)) localStorage.setItem(LEGACY_CACHE_KEY, JSON.stringify(state));
+    state.currentWeek = state.currentWeek || getCurrentWeekNum();
+    localStorage.setItem(getProgressCacheKey(courseId), JSON.stringify(state));
+    if (isLegacyCompatCourse(courseId)) localStorage.setItem(LEGACY_CACHE_KEY, JSON.stringify(state));
+  } catch (err) {
+    console.warn('[loadCourseProgress] Ошибка загрузки прогресса:', err);
+    showToast('⚠️ Не удалось загрузить прогресс курса', 'warn');
+  }
   updateCourseDependentViews();
 }
 
@@ -3754,7 +3826,7 @@ function subscribeCourseCollections(courseId = selectedCourseId) {
       value => {
         firebaseEvents = value || {};
         if (document.getElementById('tab-calendar').classList.contains('active')) renderCalendar();
-        if (isAdmin && document.getElementById('tab-admin').classList.contains('active')) renderAdminEvents();
+        if (isAdmin && document.getElementById('tab-admin')?.classList.contains('active')) renderAdminEvents();
       }
     )
   );
@@ -3799,6 +3871,7 @@ function subscribeCourseCollections(courseId = selectedCourseId) {
 }
 
 async function switchCourse(courseId, options = {}) {
+  if (isSwitchingCourse) return;
   const nextCourseId = courseId || DEFAULT_COURSE_ID;
   const isSameCourse = nextCourseId === selectedCourseId && courseContextReady;
   if (isSameCourse) {
@@ -3806,6 +3879,7 @@ async function switchCourse(courseId, options = {}) {
     return;
   }
 
+  isSwitchingCourse = true;
   if (currentUser && courseContextReady) saveProgressToFirebase();
 
   selectedCourseId = nextCourseId;
@@ -3823,15 +3897,26 @@ async function switchCourse(courseId, options = {}) {
   renderCourseControls();
   renderTaskCatOptions();
   subscribeCourseCollections(nextCourseId);
-  await loadCourseProgress(nextCourseId);
 
-  if (options.persist !== false) await persistSelectedCourse(nextCourseId);
-  if (!options.silent) showToast(`🎓 Курс: ${getCourseById(nextCourseId).shortName}`);
+  try {
+    await loadCourseProgress(nextCourseId);
+    if (options.persist !== false) await persistSelectedCourse(nextCourseId);
+    if (!options.silent) showToast(`🎓 Курс: ${getCourseById(nextCourseId).shortName}`);
+    // Switch away from tasks tab if tasks are disabled for this course
+    if (getCourseById(nextCourseId)?.tasksEnabled === false && document.getElementById('tab-tasks')?.classList.contains('active')) {
+      switchTab('home');
+    }
+  } catch (err) {
+    console.warn('[switchCourse] Ошибка переключения курса:', err);
+    showToast('⚠️ Ошибка загрузки курса', 'error');
+  } finally {
+    isSwitchingCourse = false;
+  }
 }
 
 function renderCourseSheet() {
   const items = availableCourses.map(course => `
-    <button class="course-option ${course.id === selectedCourseId ? 'active' : ''}" onclick="handleCourseOptionClick('${course.id}')">
+    <button class="course-option ${course.id === selectedCourseId ? 'active' : ''}" onclick="handleCourseOptionClick('${escapeHtml(course.id)}')">
       <div class="course-option-main">
         <div class="course-option-name">${escapeHtml(course.name)}</div>
         <div class="course-option-meta">${escapeHtml(course.description || 'Курс доступен в профиле')}</div>
@@ -4142,8 +4227,9 @@ function checkAchievements() {
 
   // count today
   const dayDone = Object.keys(state.done).filter(id => {
-    return state.done[id] && state.doneTimestamps && state.doneTimestamps[id] &&
-      new Date(state.doneTimestamps[id]).toDateString() === todayKey;
+    if (!state.done[id] || !state.doneTimestamps || !state.doneTimestamps[id]) return false;
+    const d = new Date(state.doneTimestamps[id]);
+    return isValidDate(d) && d.toDateString() === todayKey;
   }).length;
 
   ACHIEVEMENTS.forEach(a => {
@@ -4244,6 +4330,13 @@ function renderHero() {
 
 function renderCurrentWeekPreview() {
   const el = document.getElementById('currentWeekPreview');
+  if (!el) return;
+
+  // Hide tasks preview if tasks section is disabled for this course
+  if (getCourseById(selectedCourseId)?.tasksEnabled === false) {
+    el.innerHTML = '<div class="empty-state"><div class="e-icon">📚</div>Раздел задач отключён для этого курса</div>';
+    return;
+  }
 
   if (!isCourseStarted()) {
     const daysLeft = getDaysUntilStart();
@@ -4437,7 +4530,7 @@ function renderQuizHistory() {
     const date = s.lastAt ? new Date(s.lastAt).toLocaleDateString('ru-RU', { day:'numeric', month:'short' }) : '';
     return `<div class="cat-progress-card">
       <div class="cat-progress-header">
-        <div class="cat-progress-name">${theme}</div>
+        <div class="cat-progress-name">${escapeHtml(theme)}</div>
         <div class="cat-progress-pct" style="color:${color}">${pct}%</div>
       </div>
       <div class="cat-bar"><div class="cat-bar-fill" style="width:${pct}%;background:${color}"></div></div>
@@ -4487,7 +4580,7 @@ function renderThemeCard(t) {
   const color = t.pct >= 80 ? 'var(--success)' : t.pct >= 50 ? 'var(--gold)' : '#E05252';
   return `<div class="cat-progress-card">
     <div class="cat-progress-header">
-      <div class="cat-progress-name">${t.subtopic}</div>
+      <div class="cat-progress-name">${escapeHtml(t.subtopic)}</div>
       <div class="cat-progress-pct" style="color:${color}">${t.pct}%</div>
     </div>
     <div class="cat-bar"><div class="cat-bar-fill" style="width:${t.pct}%;background:${color}"></div></div>
@@ -4535,6 +4628,10 @@ function renderAll() {
 //  NAV
 // ═══════════════════════════════════════════════════
 function switchTab(tab) {
+  // Guard: prevent switching to tasks tab if tasks are disabled for current course
+  if (tab === 'tasks' && getCourseById(selectedCourseId)?.tasksEnabled === false) {
+    tab = 'home';
+  }
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
   document.getElementById(`tab-${tab}`).classList.add('active');
@@ -4598,6 +4695,10 @@ let isAdmin = false;
 let calYear, calMonth;
 let firebaseEvents = {};
 let progressSaveInterval = null;
+let saveProgressDebounceTimer = null;
+let globalCourseMetaUnsub = null;
+let globalSubjectsUnsub = null;
+let isSwitchingCourse = false;
 let firebaseTasks = [];
 let taskEditorEditingId = null;
 let adminCourseEditingId = null;
@@ -4920,6 +5021,9 @@ function onUserLoggedIn(user) {
 
 function onUserLoggedOut() {
   currentUser = null;
+  if (progressSaveInterval) { clearInterval(progressSaveInterval); progressSaveInterval = null; }
+  if (globalCourseMetaUnsub) { globalCourseMetaUnsub(); globalCourseMetaUnsub = null; }
+  if (globalSubjectsUnsub) { globalSubjectsUnsub(); globalSubjectsUnsub = null; }
   cleanupCourseSubscriptions();
   quizResults = {};
   quizQuestions = [];
@@ -4939,7 +5043,7 @@ function updateHeaderUser(user) {
 function saveProgressToFirebase() {
   if (!db || !currentUser) return;
   const uid = currentUser.uid;
-  const name = currentUser.displayName || currentUser.email.split('@')[0];
+  const name = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Пользователь');
   const data = JSON.stringify(state);
   const payload = {
     data,
@@ -4993,7 +5097,8 @@ function initFirebase() {
       }
     });
 
-    db.ref(COURSE_META_PATH).on('value', snap => {
+    const courseMetaRef = db.ref(COURSE_META_PATH);
+    const courseMetaHandler = snap => {
       const data = snap.val() || {};
       const normalized = Object.entries(data).reduce((acc, [courseId, value]) => {
         acc[courseId] = normalizeCourse(courseId, value || {});
@@ -5014,17 +5119,27 @@ function initFirebase() {
           } else {
             renderCourseControls();
           }
+        }).catch(err => {
+          console.warn('[Courses] Не удалось загрузить настройки пользователя:', err);
+          availableCourses = [getCourseById(DEFAULT_COURSE_ID)];
+          renderCourseControls();
         });
       }
-    });
-    db.ref(SUBJECTS_ROOT).on('value', snap => {
+    };
+    courseMetaRef.on('value', courseMetaHandler);
+    globalCourseMetaUnsub = () => courseMetaRef.off('value', courseMetaHandler);
+
+    const subjectsRef = db.ref(SUBJECTS_ROOT);
+    const subjectsHandler = snap => {
       subjectCatalog = snap.val() || {};
       renderAdminSubjectManager();
       renderCourseSubjectSelect();
       renderAdminTestCategoryManager();
       renderTaskCatOptions();
       renderAdminTaskCategoryManager();
-    });
+    };
+    subjectsRef.on('value', subjectsHandler);
+    globalSubjectsUnsub = () => subjectsRef.off('value', subjectsHandler);
   } catch(e) { console.warn('Firebase init error:', e); hideLoading(); }
 }
 
@@ -5212,7 +5327,7 @@ function renderCalendarEvents(filterDate) {
 
   Object.entries(firebaseEvents).forEach(([id, ev]) => {
     const d = new Date(ev.date);
-    if (d.getFullYear()===calYear && d.getMonth()===calMonth) {
+    if (isValidDate(d) && d.getFullYear()===calYear && d.getMonth()===calMonth) {
       allEvents.push({ ...ev, type: normalizeEventType(ev.type), id, source: 'firebase' });
     }
   });
@@ -5227,8 +5342,8 @@ function renderCalendarEvents(filterDate) {
 
   el.innerHTML = allEvents.map(ev => {
     const d = new Date(ev.date);
-    const day = d.getDate();
-    const mon = months[d.getMonth()];
+    const day = isValidDate(d) ? d.getDate() : '?';
+    const mon = isValidDate(d) ? months[d.getMonth()] : '???';
     const meta = getEventTypeMeta(ev.type);
     const typeClass = normalizeEventType(ev.type);
     const safeTitle = escapeHtml(ev.title || '');
@@ -5282,6 +5397,8 @@ function adminCourseReset() {
   document.getElementById('adminCourseEndDate').value = '';
   document.getElementById('adminCourseActive').value = 'true';
   document.getElementById('adminCourseLegacyCompat').value = 'false';
+  const tasksEnabledSel = document.getElementById('adminCourseTasksEnabled');
+  if (tasksEnabledSel) tasksEnabledSel.value = 'true';
   const subjSel = document.getElementById('adminCourseSubjectId');
   if (subjSel) subjSel.value = '';
 }
@@ -5303,6 +5420,7 @@ function adminEditCourse(courseId) {
   document.getElementById('adminCourseEndDate').value = course.endDate || '';
   document.getElementById('adminCourseActive').value = course.active === false ? 'false' : 'true';
   document.getElementById('adminCourseLegacyCompat').value = course.legacyCompat ? 'true' : 'false';
+  document.getElementById('adminCourseTasksEnabled').value = course.tasksEnabled !== false ? 'true' : 'false';
   renderCourseSubjectSelect(course.subjectId || '');
   const body = document.querySelector('#adminCourseEditorModal .admin-course-editor-body');
   if (body) body.scrollTo({ top: 0, behavior: 'smooth' });
@@ -5326,7 +5444,7 @@ function renderAdminCourseManager() {
           <div class="admin-course-desc">${escapeHtml(course.description || 'Без описания')}</div>
         </div>
         <div style="text-align:right;flex-shrink:0">
-          <div class="admin-chip">${course.id === selectedCourseId ? 'Текущий курс' : 'courseId: ' + course.id}</div>
+          <div class="admin-chip">${course.id === selectedCourseId ? 'Текущий курс' : 'courseId: ' + escapeHtml(course.id)}</div>
         </div>
       </div>
       <div class="admin-task-meta">
@@ -5339,9 +5457,9 @@ function renderAdminCourseManager() {
         ${course.legacyCompat ? '<span class="admin-chip">legacy fallback</span>' : ''}
       </div>
       <div class="admin-course-actions">
-        <button class="open-btn" onclick="switchCourse('${course.id}')">Открыть</button>
-        <button class="edit-btn" onclick="adminEditCourse('${course.id}')">Ред.</button>
-        <button class="toggle-btn" onclick="adminToggleCourseActive('${course.id}')">${course.active === false ? 'Включить' : 'Скрыть'}</button>
+        <button class="open-btn" onclick="switchCourse('${escapeHtml(course.id)}')">Открыть</button>
+        <button class="edit-btn" onclick="adminEditCourse('${escapeHtml(course.id)}')">Ред.</button>
+        <button class="toggle-btn" onclick="adminToggleCourseActive('${escapeHtml(course.id)}')">${course.active === false ? 'Включить' : 'Скрыть'}</button>
       </div>
     </div>
   `).join('');
@@ -5676,6 +5794,7 @@ async function adminSaveCourse() {
   const endDate = document.getElementById('adminCourseEndDate').value;
   const active = document.getElementById('adminCourseActive').value === 'true';
   const legacyCompat = document.getElementById('adminCourseLegacyCompat').value === 'true';
+  const tasksEnabled = document.getElementById('adminCourseTasksEnabled').value === 'true';
   const subjectId = document.getElementById('adminCourseSubjectId')?.value.trim() || '';
 
   if (!name) {
@@ -5699,6 +5818,7 @@ async function adminSaveCourse() {
     sortOrder: Number.isFinite(sortOrder) ? sortOrder : 0,
     active,
     legacyCompat,
+    tasksEnabled,
     startDate: startDate || '',
     endDate: endDate || '',
     subjectId: subjectId || '',
@@ -5724,7 +5844,7 @@ function renderAdminCourseOptionsHtml(selectedValue = '', options = {}) {
   const courses = includeAll ? getSortedCourses() : getSortedCourses().filter(course => course.active !== false);
   const blank = includeBlank ? `<option value="">${blankLabel}</option>` : '';
   return blank + courses.map(course => `
-    <option value="${course.id}" ${selectedValue === course.id ? 'selected' : ''}>
+    <option value="${escapeHtml(course.id)}" ${selectedValue === course.id ? 'selected' : ''}>
       ${escapeHtml(course.name)}
     </option>
   `).join('');
@@ -5796,9 +5916,19 @@ function renderAdminUserImportPreview() {
 function resetAdminUserImport() {
   adminUserImportRows = [];
   adminUserImportFileName = '';
+  adminUserImportReport = [];
   const fileInput = document.getElementById('adminUserImportFile');
   if (fileInput) fileInput.value = '';
+  const progressWrap = document.getElementById('adminUserImportProgressWrap');
+  const progressBar = document.getElementById('adminUserImportProgressBar');
+  const progressLabel = document.getElementById('adminUserImportProgressLabel');
+  const importBtn = document.getElementById('adminUserImportBtn');
+  if (progressWrap) progressWrap.style.display = 'none';
+  if (progressBar) progressBar.style.width = '0%';
+  if (progressLabel) progressLabel.textContent = 'Создание пользователей...';
+  if (importBtn) importBtn.disabled = false;
   renderAdminUserImportPreview();
+  renderAdminImportReport();
 }
 
 async function handleAdminUserImportFile(event) {
@@ -5910,16 +6040,7 @@ async function upsertUserFromAdminRow(row, options = {}) {
     settings.createdAt = Date.now();
     settings.createdBy = currentUser?.uid || 'admin';
     await persistUserSettings(uid, settings);
-    let inviteNote = '';
-    if (options.sendInvite !== false) {
-      try {
-        await sendPasswordSetupEmail(email);
-        inviteNote = 'Письмо Firebase для установки пароля отправлено';
-      } catch (inviteError) {
-        inviteNote = 'Аккаунт создан, но письмо не отправилось';
-      }
-    }
-    return { email, fullName: settings.fullName || row.fullName || email, courseId, action: inviteNote ? 'создан' : 'создан', note: inviteNote };
+    return { email, fullName: settings.fullName || row.fullName || email, courseId, action: 'создан', note: 'Аккаунт создан, ожидает отправку приглашения', needsInvite: true };
   } catch (error) {
     if (String(error.message || '').includes('EMAIL_EXISTS')) {
       let pending = mergeUserIdentityIntoSettings(existing?.settings || {}, row, { email });
@@ -5929,14 +6050,7 @@ async function upsertUserFromAdminRow(row, options = {}) {
       });
       if (!pending.createdAt) pending.createdAt = Date.now();
       await storePendingEnrollment(email, pending);
-      let note = 'Аккаунт уже есть в Firebase Auth, доступ будет применён после первого входа';
-      try {
-        if (options.sendInvite !== false) {
-          await sendPasswordSetupEmail(email);
-          note += ' · ссылка на установку пароля отправлена';
-        }
-      } catch (_) {}
-      return { email, fullName: pending.fullName || row.fullName || email, courseId, action: 'обновлён', note };
+      return { email, fullName: pending.fullName || row.fullName || email, courseId, action: 'обновлён', note: 'Аккаунт уже есть в Firebase Auth, доступ будет применён после первого входа', needsInvite: true };
     }
     return { email, fullName: row.fullName || email, courseId, action: 'ошибка', note: String(error.message || error) };
   }
@@ -5948,18 +6062,59 @@ async function runAdminUserImport() {
     return;
   }
   const courseId = document.getElementById('adminUserImportCourse')?.value || selectedCourseId;
+  const importBtn = document.getElementById('adminUserImportBtn');
+  const progressWrap = document.getElementById('adminUserImportProgressWrap');
+  const progressBar = document.getElementById('adminUserImportProgressBar');
+  const progressLabel = document.getElementById('adminUserImportProgressLabel');
+
   adminUserImportReport = [];
   renderAdminImportReport();
-  for (const row of adminUserImportRows) {
+  if (importBtn) importBtn.disabled = true;
+  if (progressWrap) progressWrap.style.display = 'block';
+
+  // Phase 1: Create / update all users (fast)
+  const total = adminUserImportRows.length;
+  const createdUsers = [];
+  for (let i = 0; i < total; i++) {
+    const row = adminUserImportRows[i];
     const result = await upsertUserFromAdminRow(row, {
       courseId,
-      sendInvite: true,
+      sendInvite: false,
       setAsCurrent: false,
       source: 'import',
     });
     adminUserImportReport.push(result);
+    if (result.needsInvite) createdUsers.push({ ...result, index: i });
     renderAdminImportReport();
+    if (progressBar) progressBar.style.width = `${Math.round(((i + 1) / total) * 50)}%`;
+    if (progressLabel) progressLabel.textContent = `Создание пользователей... ${i + 1}/${total}`;
   }
+
+  // Phase 2: Send invite emails with delay + retry (slow but reliable)
+  const inviteTotal = createdUsers.length;
+  if (inviteTotal === 0) {
+    if (progressBar) progressBar.style.width = '100%';
+    if (progressLabel) progressLabel.textContent = 'Готово! Все пользователи уже существуют';
+  }
+  for (let i = 0; i < inviteTotal; i++) {
+    const user = createdUsers[i];
+    const inviteResult = await sendPasswordSetupEmailWithRetry(user.email, 3, 3000);
+    // Update the report entry for this user
+    const reportEntry = adminUserImportReport[user.index];
+    if (reportEntry) {
+      reportEntry.note = inviteResult.success
+        ? `${reportEntry.note} · ✅ ${inviteResult.note}`
+        : `${reportEntry.note} · ⚠️ ${inviteResult.note}`;
+    }
+    renderAdminImportReport();
+    if (progressBar) progressBar.style.width = `${50 + Math.round(((i + 1) / inviteTotal) * 50)}%`;
+    if (progressLabel) progressLabel.textContent = `Отправка приглашений... ${i + 1}/${inviteTotal}`;
+    // Delay between emails to avoid Firebase rate limits
+    if (i < inviteTotal - 1) await new Promise(r => setTimeout(r, 3000));
+  }
+
+  if (progressLabel) progressLabel.textContent = 'Готово!';
+  if (importBtn) importBtn.disabled = false;
   showToast('✅ Импорт завершён');
 }
 
@@ -5972,6 +6127,8 @@ function resetAdminManualUserForm() {
 }
 
 async function adminCreateUserManually() {
+  const btn = document.getElementById('adminManualCreateBtn');
+  if (btn) btn.disabled = true;
   const row = {
     email: document.getElementById('adminManualUserEmail').value,
     firstName: document.getElementById('adminManualUserFirstName').value.trim(),
@@ -5988,19 +6145,28 @@ async function adminCreateUserManually() {
   };
   if (!normalizeEmail(row.email) || !row.firstName || !row.lastName) {
     showToast('⚠️ Заполни email, имя и фамилию');
+    if (btn) btn.disabled = false;
     return;
   }
   const courseId = document.getElementById('adminManualUserCourse').value || selectedCourseId;
   const result = await upsertUserFromAdminRow(row, {
     courseId,
-    sendInvite: true,
+    sendInvite: false,
     setAsCurrent: true,
     source: 'manual',
   });
+  // Send invite immediately for single user (with retry)
+  if (result.needsInvite) {
+    const inviteResult = await sendPasswordSetupEmailWithRetry(result.email, 3, 3000);
+    result.note = inviteResult.success
+      ? `${result.note} · ✅ ${inviteResult.note}`
+      : `${result.note} · ⚠️ ${inviteResult.note}`;
+  }
   showToast(result.action.startsWith('ошибка') ? '❌ Ошибка создания пользователя' : '✅ Пользователь обработан');
   adminUserImportReport = [result, ...adminUserImportReport];
   renderAdminImportReport();
   if (!result.action.startsWith('ошибка')) resetAdminManualUserForm();
+  if (btn) btn.disabled = false;
 }
 
 function getAccessibleCourseIds(settings = {}) {
@@ -6321,7 +6487,7 @@ function renderTaskEditorList() {
       listEl.innerHTML = `
         <div class="empty-state">
           <div class="e-icon">📭</div>
-          В Firebase по пути <b>${getCourseCollectionPath('tasks')}</b> пока нет задач<br>
+          В Firebase по пути <b>${escapeHtml(getCourseCollectionPath('tasks'))}</b> пока нет задач<br>
           <span style="font-size:12px;color:var(--text3);font-weight:700">Поэтому раздел «Существующие задачи» пуст.</span>
           <div style="margin-top:12px">
             
@@ -6338,7 +6504,7 @@ function renderTaskEditorList() {
     return `
       <div class="admin-task-item">
         <div class="admin-task-top">
-          <div class="admin-task-name">${task.name}</div>
+          <div class="admin-task-name">${escapeHtml(task.name)}</div>
         </div>
         <div class="admin-task-meta">
           <span class="admin-chip">Неделя ${task.week}</span>
@@ -6347,8 +6513,8 @@ function renderTaskEditorList() {
           <span class="admin-chip">${task.diff || '—'}</span>
         </div>
         <div class="admin-task-actions">
-          <button class="edit-btn" onclick="taskEditorEdit('${task.id}')">✏️ Редактировать</button>
-          <button class="delete-btn" onclick="taskEditorDelete('${task.id}')">🗑️ Удалить</button>
+          <button class="edit-btn" onclick="taskEditorEdit('${escapeHtml(task.id)}')">✏️ Редактировать</button>
+          <button class="delete-btn" onclick="taskEditorDelete('${escapeHtml(task.id)}')">🗑️ Удалить</button>
         </div>
       </div>`;
   }).join('');
@@ -6367,7 +6533,7 @@ function adminLoadStudents() {
     el.innerHTML = sorted.map((s,i) => {
       const pct = s.total ? Math.round(s.done/s.total*100) : 0;
       return `<div class="student-row">
-        <div class="student-name">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'👤'} ${s.name} <span style="font-size:10px;color:var(--text3)">${s.rank}</span></div>
+        <div class="student-name">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'👤'} ${escapeHtml(s.name)} <span style="font-size:10px;color:var(--text3)">${escapeHtml(s.rank)}</span></div>
         <div class="student-stats">✅ ${s.done}/${s.total} задач · ⚡ ${s.xp} XP · 🔥 ${s.streak} дней</div>
         <div class="student-bar"><div class="student-bar-fill" style="width:${pct}%"></div></div>
       </div>`;
@@ -6422,9 +6588,9 @@ function showToast(msg) {
 // ═══════════════════════════════════════════════════
 
 // Инициализируем Telegram WebApp если доступен
-if (TG) {
+if (TG && typeof TG.ready === 'function') {
   TG.ready();
-  TG.expand();
+  if (typeof TG.expand === 'function') TG.expand();
 }
 
 initCalendar();
@@ -6487,6 +6653,7 @@ let quizQuestions = []; // loaded from Firebase
 let quizResults = {};   // userId results from Firebase
 let currentQuestion = null;
 let quizAnswered = false;
+let quizRecentIds = []; // history of recently shown question ids to avoid back-to-back repeats
 let addQType = 'single';
 let quizSession = { correct: 0, total: 0 }; // session stats
 
@@ -6555,6 +6722,7 @@ function setQuizMode(mode) {
   document.getElementById('quizStartBtn').textContent = 'Начать тест →';
   document.getElementById('quizQuestionArea').innerHTML = `<div class="empty-state"><div class="e-icon">🧪</div><div>Нажми кнопку ниже чтобы начать!</div></div>`;
   quizAnswered = false;
+  quizRecentIds = [];
 }
 
 function setQuizFilter(type, val, evt) {
@@ -6607,7 +6775,7 @@ function renderWeakThemes() {
   }
   el.innerHTML = weak.slice(0, 6).map(w => `
     <div class="weak-theme-item">
-      <div class="weak-theme-name">${w.subtopic}</div>
+      <div class="weak-theme-name">${escapeHtml(w.subtopic)}</div>
       <div class="weak-theme-pct ${w.pct < 50 ? 'bad' : w.pct < 75 ? 'ok' : 'good'}">${w.pct}%</div>
     </div>`).join('');
 }
@@ -6619,14 +6787,26 @@ function quizNext() {
     showToast('⚠️ Нет вопросов для этого режима');
     return;
   }
-  // Prioritize questions with fewer attempts or wrong answers
-  const scored = pool.map(q => {
+
+  // Exclude recently shown questions to prevent back-to-back repeats
+  const RECENT_WINDOW = Math.min(3, Math.floor(pool.length / 2));
+  const recentSlice = quizRecentIds.slice(-RECENT_WINDOW);
+  const candidates = pool.filter(q => !recentSlice.includes(q.id));
+  const finalPool = candidates.length ? candidates : pool;
+
+  // Score questions: cap wrong-answer bonus so one question can't dominate forever
+  const scored = finalPool.map(q => {
     const r = quizResults[q.id] || { attempts: 0, wrong: 0 };
-    const score = (r.wrong || 0) * 3 - (r.attempts || 0) + Math.random() * 5;
+    const wrongBonus = Math.min(r.wrong || 0, 4) * 2; // capped at 4 wrong answers
+    const score = wrongBonus - (r.attempts || 0) * 0.5 + Math.random() * 8;
     return { q, score };
   });
   scored.sort((a, b) => b.score - a.score);
+
   currentQuestion = scored[0].q;
+  quizRecentIds.push(currentQuestion.id);
+  if (quizRecentIds.length > 10) quizRecentIds.shift();
+
   quizAnswered = false;
   renderQuestion(currentQuestion);
   document.getElementById('quizStartBtn').textContent = 'Следующий вопрос →';
@@ -6643,7 +6823,7 @@ function renderQuestion(q) {
   if (q.type === 'single' || q.type === 'multi') {
     const opts = (q.options || []);
     optionsHTML = `<div class="quiz-options">${opts.map((opt, i) =>
-      `<button class="quiz-option" data-idx="${i}" onclick="quizSelect(this, '${q.type}')">${escapeHtml(opt)}</button>`
+      `<button class="quiz-option" data-idx="${i}" onclick="quizSelect(this, '${escapeHtml(q.type)}')">${escapeHtml(opt)}</button>`
     ).join('')}</div>`;
   } else if (q.type === 'match') {
     const pairs = q.pairs || [];
@@ -6701,7 +6881,7 @@ function parseCorrectOptionIndexes(correctRaw, options = []) {
 
   const tokens = Array.isArray(correctRaw)
     ? correctRaw.map(normalizeToken).filter(Boolean)
-    : String(correctRaw || '')
+    : String(correctRaw ?? '')
         .split(/[;,\s]+/)
         .map(normalizeToken)
         .filter(Boolean);
@@ -6742,7 +6922,13 @@ function quizCheckSingle() {
   const idx = parseInt(selected.dataset.idx, 10);
   const opts = currentQuestion.options || [];
   const correctIndexes = parseCorrectOptionIndexes(currentQuestion.correct, opts);
-  const correctIndex = correctIndexes.length ? correctIndexes[0] : -1;
+  if (!correctIndexes.length) {
+    console.warn('[Quiz] Вопрос с неразборным полем correct, пропускаем:', currentQuestion.id, currentQuestion.correct);
+    showFeedback(true, '⚠️ В этом вопросе некорректно задан правильный ответ — он пропущен автоматически.');
+    quizAnswered = true;
+    return;
+  }
+  const correctIndex = correctIndexes[0];
   const isCorrect = idx === correctIndex;
 
   document.querySelectorAll('.quiz-option').forEach((b, i) => {
@@ -6771,6 +6957,12 @@ function quizCheckMulti() {
     .sort((a, b) => a - b);
 
   const correctIndexes = parseCorrectOptionIndexes(currentQuestion.correct, opts);
+  if (!correctIndexes.length) {
+    console.warn('[Quiz] Вопрос с неразборным полем correct, пропускаем:', currentQuestion.id, currentQuestion.correct);
+    showFeedback(true, '⚠️ В этом вопросе некорректно задан правильный ответ — он пропущен автоматически.');
+    quizAnswered = true;
+    return;
+  }
 
   const isCorrect = selectedIndexes.length === correctIndexes.length &&
     selectedIndexes.every((v, i) => v === correctIndexes[i]);
@@ -6846,6 +7038,7 @@ async function getAiExplanation(q, isCorrect) {
       })
     });
 
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     let text = data?.text || '';
 
@@ -6975,7 +7168,7 @@ function adminLoadQuizStats() {
       <div style="font-size:11px;font-weight:800;color:var(--text2);margin-bottom:6px">🔴 Проблемные темы у учеников:</div>
       ${topErrors.map(([theme, errors]) => `
         <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--c5);border-radius:8px;margin-bottom:4px;font-size:12px;font-weight:700">
-          <span>${theme}</span><span style="color:#FF6B6B">${errors} ошибок</span>
+          <span>${escapeHtml(theme)}</span><span style="color:#FF6B6B">${errors} ошибок</span>
         </div>`).join('') || '<div style="font-size:12px;color:var(--text3)">Данных пока нет</div>'}
     `;
   });
@@ -7022,7 +7215,7 @@ function renderAdminQuestionList() {
       </div>
       <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;line-height:1.4">${q.question?.slice(0,120)}${q.question?.length>120?'...':''}</div>
       <div style="display:flex;gap:8px">
-        <button onclick="openEditQModal('${q.id}')" style="flex:1;padding:7px;background:var(--c4);border:none;border-radius:8px;font-family:Nunito,sans-serif;font-size:11px;font-weight:800;color:var(--c1);cursor:pointer">✏️ Редактировать</button>
+        <button onclick="openEditQModal('${escapeHtml(q.id)}')" style="flex:1;padding:7px;background:var(--c4);border:none;border-radius:8px;font-family:Nunito,sans-serif;font-size:11px;font-weight:800;color:var(--c1);cursor:pointer">✏️ Редактировать</button>
         <button onclick="adminDeleteQuestion('${q.id}')" style="padding:7px 12px;background:#FFF0F0;border:none;border-radius:8px;font-family:Nunito,sans-serif;font-size:11px;font-weight:800;color:#FF6B6B;cursor:pointer">🗑️</button>
       </div>
     </div>
@@ -7065,6 +7258,10 @@ function adminSaveQuestion() {
   if (!editingQId || !db) return;
   const q = quizQuestions.find(q => q.id === editingQId);
   if (!q) return;
+  if (!VALID_QUESTION_TYPES.includes(q.type)) {
+    showToast('⚠️ Некорректный тип вопроса', 'error');
+    return;
+  }
 
   const updated = {
     ...q,
